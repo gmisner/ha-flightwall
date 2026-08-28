@@ -1,0 +1,83 @@
+# Flightwall - core entities
+#
+# Drop this file in <config>/packages/ and make sure packages are enabled in
+# configuration.yaml:
+#
+#   homeassistant:
+#     packages: !include_dir_named packages
+#
+# Before this works, rename your Flightradar24 "flights in area" entity to
+# sensor.flightradar24_flights_in_area (Settings -> Devices & Services ->
+# Entities). The integration names it after your Home Assistant language, so
+# hardcoding one name here would only work for English installs.
+
+template:
+  - trigger:
+      - trigger: state
+        entity_id: sensor.flightradar24_flights_in_area
+      - trigger: homeassistant
+        event: start
+    sensor:
+      # Picks the aircraft with the highest elevation angle, i.e. the one you
+      # would actually see if you looked up. Sorting by ground distance alone
+      # returns cruising traffic at 11 km altitude instead of the approach you
+      # can hear overhead.
+      - name: Flightwall Flight
+        unique_id: flightwall_flight
+        icon: mdi:airplane
+        state: >
+          {% set fl = state_attr('sensor.flightradar24_flights_in_area','flights') or [] %}
+          {% set ns = namespace(best=none, score=-1) %}
+          {% for f in fl %}
+            {% if f.altitude is defined and f.distance is defined and (f.altitude | float(0)) > 500 %}
+              {% set alt_m = f.altitude | float(0) * 0.3048 %}
+              {% set dist_m = [f.distance | float(0) * 1000, 50] | max %}
+              {% set elev = atan(alt_m / dist_m) %}
+              {% if elev > ns.score %}
+                {% set ns.score = elev %}
+                {% set ns.best = f %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.best.callsign if ns.best else 'none' }}
+        attributes:
+          flight: >
+            {% set fl = state_attr('sensor.flightradar24_flights_in_area','flights') or [] %}
+            {% set ns = namespace(best=none, score=-1) %}
+            {% for f in fl %}
+              {% if f.altitude is defined and f.distance is defined and (f.altitude | float(0)) > 500 %}
+                {% set alt_m = f.altitude | float(0) * 0.3048 %}
+                {% set dist_m = [f.distance | float(0) * 1000, 50] | max %}
+                {% set elev = atan(alt_m / dist_m) %}
+                {% if elev > ns.score %}
+                  {% set ns.score = elev %}
+                  {% set ns.best = f %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.best }}
+
+    binary_sensor:
+      # delay_off keeps the display from flickering on and off between polls.
+      # Raise it if you live near a busy airport and the screen cycles too much.
+      - name: Flightwall Inbound
+        unique_id: flightwall_inbound
+        delay_off: "00:02:00"
+        state: >
+          {{ (state_attr('sensor.flightradar24_flights_in_area','flights') or []) | count > 0 }}
+
+input_text:
+  # Remembers the last callsign that was shown, so the same aircraft is not
+  # displayed again while it is still crossing the zone.
+  flightwall_shown:
+    name: Flightwall Shown
+    max: 255
+    initial: "-"
+
+rest_command:
+  # Fully Kiosk Browser remote administration. Requires the Plus licence.
+  # Replace TABLET_IP and FULLY_PASSWORD, or delete this block entirely and
+  # remove the rest_command action from the automation if you do not use Fully.
+  tablet_stop_screensaver:
+    url: "http://TABLET_IP:2323/?cmd=stopScreensaver&password=FULLY_PASSWORD&type=json"
+    method: GET

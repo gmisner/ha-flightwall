@@ -1,0 +1,160 @@
+# Flightwall for Home Assistant
+
+A dot-matrix flight display for Home Assistant. When an aircraft passes overhead, a
+full-screen panel shows the airline logo, callsign, route, aircraft type, departure
+and arrival times, live telemetry, and a flight progress bar.
+
+Inspired by [The Flightwall](https://theflightwall.com/), rebuilt as a Home Assistant
+popup or dashboard rather than a physical LED matrix.
+
+```
+                                EWG80V (EUROWINGS)
+
+         [LOGO]                 DUS-KGS
+
+                                AIRBUS A320-232
+                                DEPARTED DUSSELDORF 19M AGO
+                                ARRIVING KOS IN 2H 33M
+                                31.475 FT · 407 KT · 3.2 KM
+
+                                ████████░░░░░░░░░░░░░░░░
+```
+
+## What it does
+
+- Picks the single most visible aircraft in range using **elevation angle**, not
+  ground distance. A jet cruising at 11 km altitude that happens to be 9 km away
+  horizontally is not the plane you can see out of the window; the one on approach
+  at 3000 ft is. Sorting by distance alone gets this wrong constantly.
+- Shows each aircraft **once** as it enters the zone, rather than repeating while it
+  crosses.
+- Optionally wakes a wall-mounted tablet when traffic appears.
+
+## Requirements
+
+### Home Assistant
+
+| Component | Source | Required for |
+|---|---|---|
+| [Flightradar24 integration](https://github.com/AlexandrErohin/home-assistant-flightradar24) | HACS | Flight data (all setups) |
+| [card-mod](https://github.com/thomasloven/lovelace-card-mod) | HACS | Styling (all setups) |
+| [browser-mod](https://github.com/thomasloven/hass-browser_mod) | HACS | Popup variant only |
+| [stack-in-card](https://github.com/custom-cards/stack-in-card) | HACS | Popup variant only |
+| [kiosk-mode](https://github.com/maykar/kiosk-mode) | HACS | Dashboard variant only |
+
+### Optional hardware
+
+- A tablet or old phone for wall mounting.
+- [Fully Kiosk Browser](https://www.fully-kiosk.com/) with the **Plus licence**
+  (~€12 one-off) if you want Home Assistant to wake the screen. Without Plus the
+  remote API is unavailable and screen control is not possible.
+
+### Caveat about the data source
+
+The Flightradar24 integration uses an undocumented endpoint. It is a grey area with
+respect to FR24's terms of service, and it will break whenever FR24 changes their
+API. Do not build anything load-bearing on it. If you want something durable, run a
+local ADS-B receiver (RTL-SDR dongle plus `readsb`/`tar1090`, around €40) and adapt
+the template sensor to read from that instead; the rest of this project works
+unchanged.
+
+## Installation
+
+### 1. Set up Flightradar24
+
+Install via HACS, add the integration, and set your coordinates and a radius. **Start
+with 30 km.** Anything smaller and aircraft will have crossed your position before
+the next poll (the integration polls roughly every 30 seconds, and an airliner covers
+about 4 km in that time).
+
+Then go to **Settings → Devices & Services → Entities**, find the "flights in area"
+sensor, and rename it to:
+
+```
+sensor.flightradar24_flights_in_area
+```
+
+This step is not optional. The integration names entities after your Home Assistant
+language, so a German install gets `sensor.flightradar24_fluge_im_bereich`, a French
+one something else again. Renaming once is simpler than editing eight template
+references.
+
+### 2. Install the package
+
+Enable packages in `configuration.yaml` if you have not already:
+
+```yaml
+homeassistant:
+  packages: !include_dir_named packages
+```
+
+Copy `packages/flightwall.yaml` into your `<config>/packages/` directory, edit the
+`rest_command` block at the bottom with your tablet's IP and Fully password, then
+restart Home Assistant.
+
+This creates:
+
+- `sensor.flightwall_flight` — the selected aircraft, with all its data in the
+  `flight` attribute
+- `binary_sensor.flightwall_inbound` — on while any aircraft is in range
+- `input_text.flightwall_shown` — remembers the last shown callsign
+- `rest_command.tablet_stop_screensaver` — wakes the tablet
+
+### 3. Verify the data before going further
+
+Open **Developer Tools → States** and check `sensor.flightwall_flight`. If it says
+`none` with an empty `flight` attribute, stop here and fix that first — the display
+work downstream is pointless until data arrives. See
+[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+
+Also look at the attribute keys in the `flight` attribute. They come straight from
+FR24 and may differ from what the templates expect; every field is wrapped in a
+fallback, so a missing key degrades gracefully rather than breaking the layout, but
+you may see `IN FLIGHT` where you expected a route.
+
+### 4. Pick a variant
+
+**Popup** (`automations/flightwall_popup.yaml`) — a full-screen overlay that appears
+on new traffic and closes after 60 seconds or on tap. Good if the tablet also shows
+other dashboards.
+
+**Dashboard** (`dashboard/flightwall_view.yaml`) — a permanent panel view. Simpler,
+fewer dependencies, and the tablet shows nothing else.
+
+Installation instructions are in the header comment of each file.
+
+## Configuration
+
+Everything worth changing is documented in
+[docs/CUSTOMISATION.md](docs/CUSTOMISATION.md). The three settings most people want:
+
+| What | Where | Default |
+|---|---|---|
+| Quiet hours | `condition: time` in the automation | 07:00–22:00 |
+| How long the popup stays | `timeout` in the automation | 60000 ms |
+| How long after the last aircraft the display stays active | `delay_off` on the binary sensor | 2 minutes |
+
+## Known limitations
+
+- **Airline logos max out at 128 px.** They come from the Kiwi CDN, which has no
+  higher resolution. Under a dot-matrix mask, wordmark logos in script fonts stay
+  hard to read no matter what. Roundels and simple marks work well.
+- **Logos are third-party.** If the Kiwi CDN goes away, logos break. Unknown airline
+  codes fall back to a generic aircraft icon from the same CDN.
+- **`aircraft_model` is not always populated.** When it is missing the display falls
+  back to the ICAO type code (`A320`, `B738`), which is less readable but always
+  present.
+- **The dot-matrix effect softens text by design.** It cuts holes in every glyph. The
+  mask spacing and the faux-bold `text-shadow` are tuned as a compromise; see
+  CUSTOMISATION for the two values to adjust.
+
+## Credits
+
+Concept from [The Flightwall](https://theflightwall.com/). Flight data via the
+[Flightradar24 integration](https://github.com/AlexandrErohin/home-assistant-flightradar24)
+by AlexandrErohin. Airline logos from the Kiwi.com CDN. Typeface is
+[Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) by CodeMan38.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
