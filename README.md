@@ -1,11 +1,11 @@
-# Flightwall for Home Assistant
+# Flight Wall
 
 A dot-matrix flight display for Home Assistant. When an aircraft passes overhead, a
 full-screen panel shows the airline logo, callsign, route, aircraft type, departure
 and arrival times, live telemetry, and a flight progress bar.
 
-Inspired by [The Flightwall](https://theflightwall.com/), rebuilt as a Home Assistant
-popup or dashboard rather than a physical LED matrix.
+Built for a wall-mounted tablet. Inspired by physical LED flight boards, in
+particular [The Flightwall](https://theflightwall.com/).
 
 ```
                                 EWG80V (EUROWINGS)
@@ -149,9 +149,21 @@ Everything worth changing is documented in
   mask spacing and the faux-bold `text-shadow` are tuned as a compromise; see
   CUSTOMISATION for the two values to adjust.
 
+## Trademarks and affiliation
+
+This is an independent hobby project. It is not affiliated with, endorsed by,
+sponsored by, or connected to The Flightwall, Flightradar24, Kiwi.com, or any
+airline.
+
+All product names, logos, and brands are the property of their respective owners.
+Airline logos are fetched at display time from a third-party CDN and shown solely to
+identify the aircraft currently overhead. If you would rather not display them, set
+the image filter to `grayscale(1)` for a monochrome LED look, or point the URL at
+your own assets — see [docs/CUSTOMISATION.md](docs/CUSTOMISATION.md).
+
 ## Credits
 
-Concept from [The Flightwall](https://theflightwall.com/). Flight data via the
+Inspired by [The Flightwall](https://theflightwall.com/). Flight data via the
 [Flightradar24 integration](https://github.com/AlexandrErohin/home-assistant-flightradar24)
 by AlexandrErohin. Airline logos from the Kiwi.com CDN. Typeface is
 [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) by CodeMan38.

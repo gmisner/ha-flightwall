@@ -1,4 +1,4 @@
-# Flightwall popup
+# Flight Wall - popup automation
 #
 # Paste this into Settings -> Automations -> Create automation -> three-dot menu
 # -> Edit in YAML. Do not add a leading "- " or an "automation:" key; the editor
