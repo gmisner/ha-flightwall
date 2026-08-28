@@ -7,18 +7,8 @@ and arrival times, live telemetry, and a flight progress bar.
 Built for a wall-mounted tablet. Inspired by physical LED flight boards, in
 particular [The Flightwall](https://theflightwall.com/).
 
-```
-                                EWG80V (EUROWINGS)
+<img width="2258" height="1252" alt="Xnip2026-08-28_18-45-36" src="https://github.com/user-attachments/assets/03ee865e-c664-48e5-a495-84c1ab0d3b15" />
 
-         [LOGO]                 DUS-KGS
-
-                                AIRBUS A320-232
-                                DEPARTED DUSSELDORF 19M AGO
-                                ARRIVING KOS IN 2H 33M
-                                31.475 FT · 407 KT · 3.2 KM
-
-                                ████████░░░░░░░░░░░░░░░░
-```
 
 ## What it does
 
