@@ -34,13 +34,14 @@ popup or dashboard rather than a physical LED matrix.
 
 ### Home Assistant
 
-| Component | Source | Required for |
+All four are required.
+
+| Component | Source | Why |
 |---|---|---|
-| [Flightradar24 integration](https://github.com/AlexandrErohin/home-assistant-flightradar24) | HACS | Flight data (all setups) |
-| [card-mod](https://github.com/thomasloven/lovelace-card-mod) | HACS | Styling (all setups) |
-| [browser-mod](https://github.com/thomasloven/hass-browser_mod) | HACS | Popup variant only |
-| [stack-in-card](https://github.com/custom-cards/stack-in-card) | HACS | Popup variant only |
-| [kiosk-mode](https://github.com/maykar/kiosk-mode) | HACS | Dashboard variant only |
+| [Flightradar24 integration](https://github.com/AlexandrErohin/home-assistant-flightradar24) | HACS | Flight data |
+| [browser-mod](https://github.com/thomasloven/hass-browser_mod) | HACS | Renders the full-screen popup |
+| [card-mod](https://github.com/thomasloven/lovelace-card-mod) | HACS | All styling |
+| [stack-in-card](https://github.com/custom-cards/stack-in-card) | HACS | Holds the display and the close button in one card, since `browser_mod.popup` accepts only one |
 
 ### Optional hardware
 
@@ -112,16 +113,16 @@ FR24 and may differ from what the templates expect; every field is wrapped in a
 fallback, so a missing key degrades gracefully rather than breaking the layout, but
 you may see `IN FLIGHT` where you expected a route.
 
-### 4. Pick a variant
+### 4. Add the automation
 
-**Popup** (`automations/flightwall_popup.yaml`) — a full-screen overlay that appears
-on new traffic and closes after 60 seconds or on tap. Good if the tablet also shows
-other dashboards.
+Go to **Settings → Automations → Create automation**, then the three-dot menu →
+**Edit in YAML**, and paste the contents of `automations/flightwall_popup.yaml`.
 
-**Dashboard** (`dashboard/flightwall_view.yaml`) — a permanent panel view. Simpler,
-fewer dependencies, and the tablet shows nothing else.
+Do not include a leading `- ` or an `automation:` key — the editor expects a single
+automation body, and that is the most common paste error.
 
-Installation instructions are in the header comment of each file.
+The popup appears when new traffic arrives and closes after 60 seconds, on tap, or
+when the last aircraft leaves the zone.
 
 ## Configuration
 

@@ -95,9 +95,10 @@ subtree. Run this in the browser console while the popup is open:
 ```
 
 Look for `filter: blur()`, `backdrop-filter: blur()`, or a `transform: matrix()` on
-any `browser-mod-*` or dialog element. Any of these rasterises everything inside it.
-The dashboard variant avoids this entirely because there is no dialog in the chain —
-if you cannot resolve it, switch variants.
+any `browser-mod-*` or dialog element. Any of these rasterises everything inside it,
+and CSS applied from inside the card cannot override an ancestor. If you find one,
+the fix has to target that specific element — either through your theme or by
+patching the offending property at runtime.
 
 ## Layout breaks when a logo is missing
 
