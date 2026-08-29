@@ -1,0 +1,71 @@
+# Flight Wall - Cast-safe TV board
+#
+# Core markdown only. No card-mod, stack-in-card, browser-mod, or iframes —
+# those fail on Google Cast. Do not set panel: true; Cast will not render a
+# single-card panel view.
+#
+# Include from configuration.yaml. The dashboard key must contain a hyphen:
+#
+#   lovelace:
+#     dashboards:
+#       flight-wall:
+#         mode: yaml
+#         filename: dashboards/flightwall.yaml
+#         title: Flightwall
+#         icon: mdi:airplane
+#         show_in_sidebar: true
+#
+# Then cast with dashboard_path: flight-wall and view_path: board.
+
+title: Flightwall
+views:
+  - title: Board
+    path: board
+    theme: flightwall
+    type: masonry
+    cards:
+      - type: markdown
+        content: |
+          {% set f = state_attr('sensor.flightwall_flight','flight') %}
+          {% if f %}
+          {% macro clean(v, fb) %}{% set s = v | string | trim %}{{ fb if s in ['', 'None', 'none', 'null', 'N/A'] else s }}{% endmacro %}
+          {% set org = clean(f.airport_origin_code_iata, '') | trim %}
+          {% set dst = clean(f.airport_destination_code_iata, '') | trim %}
+          {% set orgc = clean(f.airport_origin_city, '') | trim %}
+          {% set dstc = clean(f.airport_destination_city, '') | trim %}
+          {% set iata = clean(f.airline_iata, '') | trim %}
+          {% set airline = clean(f.airline_short, '') | trim %}
+          {% set airlinel = clean(f.airline, '') | trim %}
+          {% set model = clean(f.aircraft_model, '') | trim %}
+          {% set code = clean(f.aircraft_code, '') | trim %}
+          {% set cs = clean(f.callsign, '') | trim %}
+          {% set reg = clean(f.aircraft_registration, '') | trim %}
+          {% set dep = (f.time_real_departure | default(0) | int(0)) or (f.time_scheduled_departure | default(0) | int(0)) %}
+          {% set arr = (f.time_estimated_arrival | default(0) | int(0)) or (f.time_scheduled_arrival | default(0) | int(0)) %}
+          {% set nw = as_timestamp(now()) | int %}
+          {% set d = nw - dep %}
+          {% set a = arr - nw %}
+          {% set prog = ([[(((nw - dep) / ([arr - dep, 1] | max)) * 32) | round(0) | int, 0] | max, 32] | min) if (arr > dep and dep > 0) else 0 %}
+          {% set alraw = airline if airline else airlinel %}
+          {% set al = alraw | truncate(22, true, '') | trim %}
+          ![](https://images.kiwi.com/airlines/128/{{ iata | upper if iata else 'non-existing' }}.png)
+
+          ## {{ cs if cs else reg }}{% if al %} ({{ al }}){% endif %}
+
+          # {% if org and dst %}{{ org }}-{{ dst }}{% elif reg %}{{ reg }}{% else %}IN FLIGHT{% endif %}
+
+          ### {{ model if model else code }}
+
+          {% if dep > 0 and d > 0 %}DEPARTED {% if orgc %}{{ orgc }} {% endif %}{% if d >= 3600 %}{{ d // 3600 }}H {{ (d % 3600) // 60 }}M{% else %}{{ d // 60 }}M{% endif %} AGO{% else %}IN FLIGHT{% endif %}
+
+          {% if a > 0 %}ARRIVING {% if dstc %}{{ dstc }} {% endif %}IN {% if a >= 3600 %}{{ a // 3600 }}H {{ (a % 3600) // 60 }}M{% else %}{{ a // 60 }}M{% endif %}{% else %}EN ROUTE{% endif %}
+
+          {% if f.altitude is defined %}{{ "{:,}".format(f.altitude | int) | replace(",", ".") }} FT{% if f.ground_speed is defined %} · {{ f.ground_speed | int }} KT{% endif %}{% if f.distance is defined %} · {{ f.distance | round(1) }} KM{% endif %}{% endif %}
+
+          {{ '█' * prog }}{{ '░' * (32 - prog) }}
+          {% else %}
+
+          # —
+
+          ## WAITING FOR TRAFFIC
+          {% endif %}

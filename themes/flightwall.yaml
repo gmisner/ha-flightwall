@@ -1,0 +1,25 @@
+# Flight Wall - dark theme for the Cast / TV dashboard.
+#
+# Include from configuration.yaml:
+#
+#   frontend:
+#     themes: !include_dir_merge_named themes
+#
+# Hex values are quoted so YAML does not treat # as a comment.
+
+flightwall:
+  primary-color: "#7ea6ff"
+  accent-color: "#35ff7a"
+  primary-background-color: "#000000"
+  secondary-background-color: "#000000"
+  card-background-color: "#000000"
+  primary-text-color: "#ffffff"
+  secondary-text-color: "#9fb8e8"
+  text-primary-color: "#ffffff"
+  app-header-background-color: "#000000"
+  app-header-text-color: "#ffffff"
+  ha-card-background: "#000000"
+  ha-card-border-width: 0px
+  ha-card-border-radius: 0px
+  ha-card-box-shadow: "none"
+  lovelace-background: "#000000"

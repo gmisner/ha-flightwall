@@ -80,6 +80,32 @@ unchanged.
 
 ## Installation
 
+### HACS (guest-room TV, recommended)
+
+This is the path if you want the board on a Vizio / Chromecast TV. Do **not**
+also copy `packages/flightwall.yaml` — you would get duplicate entities.
+
+1. Install [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) via HACS, set coordinates and a **30 km** radius, and rename the flights-in-area sensor to `sensor.flightradar24_flights_in_area` if you want the default name.
+2. HACS → three dots → **Custom repositories** →
+   `https://github.com/gmisner/ha-flightwall` → type **Integration** → Add.
+3. Find **Flight Wall** in HACS and download it. Restart Home Assistant.
+4. **Settings → Devices & Services → Add integration → Flight Wall.**
+   Pick the FR24 flights sensor, the Vizio `media_player` (power), and the
+   Chromecast `media_player` on that TV.
+5. Home Assistant must be reachable over **HTTPS** (Nabu Casa or
+   `external_url`). Cast does nothing over plain HTTP.
+6. Leave `switch.flightwall_tv` on. Put it on a dashboard if someone in
+   that room will want Netflix instead.
+
+The integration creates `sensor.flightwall_flight`, the inbound binary
+sensor, the TV switch, and a **Flightwall** sidebar dashboard. Turning the
+TV on with the remote should show the board after about ten seconds.
+
+Tablet LED / split-flap popup is still the manual package path below
+(browser-mod, card-mod, stack-in-card).
+
+### Manual package (tablet popup)
+
 ### 1. Set up Flightradar24
 
 Install via HACS, add the integration, and set your coordinates and a radius. **Start
@@ -118,6 +144,9 @@ This creates:
   `flight` attribute
 - `binary_sensor.flightwall_inbound` — on while any aircraft is in range
 - `input_text.flightwall_shown` — remembers the last shown callsign
+- `input_boolean.flightwall_tv` — guest-room TV is a flight board (leave on)
+- `input_text.flightwall_tv_power` — Vizio `media_player` used as the on/off signal
+- `input_text.flightwall_tv_player` — the Google Cast `media_player` entity
 - `rest_command.tablet_stop_screensaver` — wakes the tablet
 
 ### 3. Install the split-flap board page
@@ -158,6 +187,22 @@ automation body, and that is the most common paste error.
 The popup appears when new traffic arrives and closes after 60 seconds, on tap, or
 when the last aircraft leaves the zone.
 
+### 6. Optional: guest-room TV
+
+For a set that should *be* the flight board whenever someone turns it on
+(a guest room, a shop). The remote is the only on/off. Home Assistant
+never powers the TV down.
+
+A Vizio cannot run the tablet popup. Copy
+`dashboards/flightwall.yaml` and `themes/flightwall.yaml`, add the
+includes, paste `automations/flightwall_tv.yaml`, and fill the two TV
+helpers — Vizio power and Chromecast — then leave
+`input_boolean.flightwall_tv` on. Full walkthrough:
+[docs/TV.md](docs/TV.md).
+
+AirPlay on the Vizio is manual mirroring from an Apple device, not
+something HA can start.
+
 ## Configuration
 
 Everything worth changing is documented in
@@ -168,6 +213,9 @@ Everything worth changing is documented in
 | Quiet hours | `condition: time` in the automation | 07:00–22:00 |
 | How long the popup stays | `timeout` in the automation | 60000 ms |
 | How long after the last aircraft the display stays active | `delay_off` on the binary sensor | 2 minutes |
+| Guest-room TV is a flight board | `input_boolean.flightwall_tv` | off until you finish TV setup |
+| Which TV reports on/off | `input_text.flightwall_tv_power` | empty |
+| Which Cast player to use | `input_text.flightwall_tv_player` | empty |
 
 ## Known limitations
 
@@ -182,6 +230,10 @@ Everything worth changing is documented in
 - **The dot-matrix effect softens text by design.** It cuts holes in every glyph. The
   mask spacing and the faux-bold `text-shadow` are tuned as a compromise; see
   CUSTOMISATION for the two values to adjust.
+- **A Vizio cannot show the LED or split-flap styles.** Those need a browser.
+  Google Cast gets a large-type markdown board that stays up while the TV
+  is on. AirPlay is manual mirroring from an Apple device, not something
+  HA can start. See [docs/TV.md](docs/TV.md).
 
 ## Trademarks and affiliation
 
