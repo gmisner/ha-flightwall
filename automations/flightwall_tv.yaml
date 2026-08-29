@@ -1,0 +1,65 @@
+# Flight Wall - guest-room TV
+#
+# Paste this into Settings -> Automations -> Create automation -> three-dot
+# menu -> Edit in YAML. Do not add a leading "- " or an "automation:" key.
+#
+# Dedicated display: someone turns the TV on, the board appears and stays
+# up. Home Assistant never turns the TV off. Empty sky shows
+# WAITING FOR TRAFFIC; the next aircraft updates in place.
+#
+# Requires the flight-wall dashboard (see docs/TV.md), HTTPS, Google Cast,
+# and the Vizio (or other) power entity in input_text.flightwall_tv_power.
+# Leave input_boolean.flightwall_tv on. Flip it off if that room wants
+# Netflix instead.
+
+alias: Flightwall TV
+description: Casts the flight board while the guest-room TV is on
+triggers:
+  - trigger: state
+    entity_id: input_boolean.flightwall_tv
+    to: "on"
+    id: armed
+  - trigger: template
+    id: tv_on
+    value_template: >
+      {% set p = states('input_text.flightwall_tv_power') | trim | lower %}
+      {{ p | regex_match('^media_player\\.[a-z0-9_]+$')
+         and states(p) not in ['off', 'unavailable', 'unknown'] }}
+  - trigger: state
+    entity_id: sensor.flightwall_flight
+    id: flight
+  - trigger: time_pattern
+    minutes: "/3"
+    id: keep
+conditions:
+  - condition: state
+    entity_id: input_boolean.flightwall_tv
+    state: "on"
+  - condition: template
+    value_template: >
+      {{ (states('input_text.flightwall_tv_player') | trim | lower)
+         | regex_match('^media_player\\.[a-z0-9_]+$') }}
+  - condition: template
+    value_template: >
+      {% set p = states('input_text.flightwall_tv_power') | trim | lower %}
+      {% if trigger.id == 'armed' %}
+        {{ true }}
+      {% else %}
+        {{ p | regex_match('^media_player\\.[a-z0-9_]+$')
+           and states(p) not in ['off', 'unavailable', 'unknown'] }}
+      {% endif %}
+actions:
+  - if:
+      - condition: trigger
+        id: tv_on
+    then:
+      - delay:
+          seconds: 10
+  - action: cast.show_lovelace_view
+    continue_on_error: true
+    data:
+      entity_id: "{{ states('input_text.flightwall_tv_player') | trim | lower }}"
+      dashboard_path: flight-wall
+      view_path: board
+mode: single
+max_exceeded: silent

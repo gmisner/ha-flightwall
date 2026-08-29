@@ -22,6 +22,15 @@ Two values, and they are independent:
 - `timeout: 60000` in the automation (milliseconds)
 - nothing else — the progress bar shows flight progress, not a countdown
 
+### Guest-room TV
+
+Walkthrough in [TV.md](TV.md). The board appears when the TV is turned on
+and stays until the TV is turned off. Helpers:
+
+- `input_boolean.flightwall_tv` — leave on; off means that room is for TV
+- `input_text.flightwall_tv_power` — Vizio `media_player` (on/off)
+- `input_text.flightwall_tv_player` — Chromecast `media_player`
+
 ### How long the display stays active after the last aircraft
 
 `delay_off` on `binary_sensor.flightwall_inbound` in the package file. Two minutes by

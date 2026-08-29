@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0
+
+- Guest-room TV path: when the set is turned on, Cast a core-card
+  dashboard and leave it up. HA never powers the TV off. AirPlay remains
+  manual mirroring only; HA cannot start it
+
 ## 1.4.0
 
 - Screenshots of both styles in the README
