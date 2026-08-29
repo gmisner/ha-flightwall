@@ -71,52 +71,87 @@ DASHBOARD_CONFIG: dict[str, Any] = {
 }
 
 
-def _lovelace_bits(hass: HomeAssistant) -> tuple[Any, Any]:
-    """Return (dashboards_collection, dashboards_dict) if Lovelace is up."""
-    ll = hass.data.get("lovelace")
-    if ll is None:
-        return None, None
-    collection = getattr(ll, "dashboards_collection", None)
-    dashboards = getattr(ll, "dashboards", None)
-    if collection is None and isinstance(ll, dict):
-        collection = ll.get("dashboards_collection")
-        dashboards = ll.get("dashboards")
-    return collection, dashboards
+def _lovelace_data(hass: HomeAssistant) -> Any:
+    """Return the current LovelaceData object, if Lovelace is up."""
+    try:
+        from homeassistant.components.lovelace.const import LOVELACE_DATA
+
+        if LOVELACE_DATA in hass.data:
+            return hass.data[LOVELACE_DATA]
+    except ImportError:
+        pass
+    return hass.data.get("lovelace")
+
+
+def _register_sidebar(hass: HomeAssistant) -> None:
+    """Put Flightwall in the sidebar."""
+    from homeassistant.components import frontend
+
+    exists = False
+    if hasattr(frontend, "async_panel_exists"):
+        exists = frontend.async_panel_exists(hass, DASHBOARD_PATH)
+
+    kwargs: dict[str, Any] = {
+        "frontend_url_path": DASHBOARD_PATH,
+        "require_admin": False,
+        "show_in_sidebar": True,
+        "sidebar_title": "Flightwall",
+        "sidebar_icon": "mdi:airplane",
+        "config": {"mode": "storage"},
+    }
+    if exists:
+        kwargs["update"] = True
+
+    frontend.async_register_built_in_panel(hass, "lovelace", **kwargs)
 
 
 async def async_ensure_dashboard(hass: HomeAssistant) -> None:
     """Create or refresh the flight-wall storage dashboard."""
-    collection, dashboards = _lovelace_bits(hass)
-    if dashboards is None:
+    ll = _lovelace_data(hass)
+    dashboards = getattr(ll, "dashboards", None) if ll is not None else None
+    if ll is None or dashboards is None:
         _LOGGER.warning(
-            "Lovelace is not ready; add a Flightwall dashboard manually "
-            "or reload Flight Wall after a restart"
+            "Lovelace is not ready; add a Flightwall dashboard under "
+            "Settings → Dashboards, or reload Flight Wall after a restart"
         )
         return
 
-    if DASHBOARD_PATH not in dashboards and collection is not None:
+    if DASHBOARD_PATH not in dashboards:
         try:
-            await collection.async_create_item(
-                {
-                    "url_path": DASHBOARD_PATH,
-                    "title": "Flightwall",
-                    "icon": "mdi:airplane",
-                    "show_in_sidebar": True,
-                    "require_admin": False,
-                }
+            from homeassistant.components.lovelace.dashboard import (
+                DashboardsCollection,
+                LovelaceStorage,
             )
-        except (HomeAssistantError, ValueError) as err:
+
+            collection = DashboardsCollection(hass)
+            await collection.async_load()
+            if not any(
+                item.get("url_path") == DASHBOARD_PATH
+                for item in collection.async_items()
+            ):
+                await collection.async_create_item(
+                    {
+                        "url_path": DASHBOARD_PATH,
+                        "title": "Flightwall",
+                        "icon": "mdi:airplane",
+                        "show_in_sidebar": True,
+                        "require_admin": False,
+                    }
+                )
+            item = next(
+                item
+                for item in collection.async_items()
+                if item.get("url_path") == DASHBOARD_PATH
+            )
+            dashboards[DASHBOARD_PATH] = LovelaceStorage(hass, item)
+        except (HomeAssistantError, ValueError, StopIteration, ImportError) as err:
             _LOGGER.warning("Could not create the %s dashboard: %s", DASHBOARD_PATH, err)
             return
-        collection, dashboards = _lovelace_bits(hass)
 
-    if not dashboards or DASHBOARD_PATH not in dashboards:
-        _LOGGER.warning(
-            "Could not find dashboard %s after create; Cast will fail until "
-            "a dashboard with that path exists",
-            DASHBOARD_PATH,
-        )
-        return
+    try:
+        _register_sidebar(hass)
+    except ValueError as err:
+        _LOGGER.debug("Sidebar panel already registered: %s", err)
 
     dash = dashboards[DASHBOARD_PATH]
     save = getattr(dash, "async_save", None)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.1
+
+- Register the Flightwall dashboard on the sidebar using the current
+  Lovelace storage API (1.5.0 created the files but never the panel)
+
 ## 1.5.0
 
 - Guest-room TV path: when the set is turned on, Cast a core-card
