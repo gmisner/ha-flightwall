@@ -1,14 +1,43 @@
 # Flight Wall
 
-A dot-matrix flight display for Home Assistant. When an aircraft passes overhead, a
-full-screen panel shows the airline logo, callsign, route, aircraft type, departure
-and arrival times, live telemetry, and a flight progress bar.
+A flight display for Home Assistant. When an aircraft passes overhead, a full-screen
+panel shows the airline, callsign, route, aircraft type, arrival estimate, live
+telemetry, and a flight progress bar — as a dot-matrix LED panel or as a mechanical
+split-flap departure board.
 
 Built for a wall-mounted tablet. Inspired by physical LED flight boards, in
 particular [The Flightwall](https://theflightwall.com/).
 
-<img width="2258" height="1252" alt="Xnip2026-08-28_18-45-36" src="https://github.com/user-attachments/assets/03ee865e-c664-48e5-a495-84c1ab0d3b15" />
+![Dot-matrix style](docs/images/dot-matrix.jpg)
 
+## Two display styles
+
+Switch with `input_select.flightwall_style`. Takes effect on the next popup, no
+restart needed. Add the dropdown to any dashboard if you want to flip between them
+easily.
+
+**`dot-matrix`** (default) — large LED panel look with the airline logo on the left
+and the route as the hero line. Shown above.
+
+**`split-flap`** — a mechanical departure board with printed row labels, in the style
+of an airport board. Each cell is a two-leaf flap that physically cycles through the
+alphabet until it reaches its letter, so reaching `Z` visibly takes longer than
+reaching `B`. Columns start in a left-to-right sweep with slight jitter, so they do
+not move in lockstep.
+
+![Split-flap style](docs/images/split-flap.jpg)
+
+Labels are printed on the frame rather than set in flaps, which is how a real board
+does it. They are fixed unless you override them with `l1`–`l8` in the URL.
+
+No airline logo, deliberately: a flap board cannot display one. That also sidesteps
+the 128 px logo resolution ceiling. Values are hard-truncated at 16 characters.
+
+The board is a standalone HTML page at `www/splitflap.html`, rendered in an iframe.
+The automation passes the seven values and the progress figure as URL parameters, so
+the page knows nothing about Home Assistant and can be opened directly in a browser
+to preview it. This also sidesteps the markdown card's HTML sanitiser, which strips
+`class` attributes and scripts and therefore cannot animate individual characters.
 
 ## What it does
 
@@ -91,7 +120,22 @@ This creates:
 - `input_text.flightwall_shown` — remembers the last shown callsign
 - `rest_command.tablet_stop_screensaver` — wakes the tablet
 
-### 3. Verify the data before going further
+### 3. Install the split-flap board page
+
+Only needed if you want the `split-flap` style. Copy `www/splitflap.html` to
+`<config>/www/flightwall/splitflap.html`, creating the folders if they do not exist,
+then restart Home Assistant — the `www` directory is only scanned at startup.
+
+Confirm it is served by opening it directly:
+
+```
+http://your-ha:8123/local/flightwall/splitflap.html
+```
+
+With no parameters it renders a demo board, which is also the quickest way to tune
+the look without waiting for an aircraft.
+
+### 4. Verify the data before going further
 
 Open **Developer Tools → States** and check `sensor.flightwall_flight`. If it says
 `none` with an empty `flight` attribute, stop here and fix that first — the display
@@ -103,7 +147,7 @@ FR24 and may differ from what the templates expect; every field is wrapped in a
 fallback, so a missing key degrades gracefully rather than breaking the layout, but
 you may see `IN FLIGHT` where you expected a route.
 
-### 4. Add the automation
+### 5. Add the automation
 
 Go to **Settings → Automations → Create automation**, then the three-dot menu →
 **Edit in YAML**, and paste the contents of `automations/flightwall_popup.yaml`.

@@ -74,6 +74,18 @@ input_text:
     max: 255
     initial: "-"
 
+input_select:
+  # Switches the display style. Takes effect on the next popup, no restart
+  # needed. Add it to any dashboard as a dropdown if you want to flip between
+  # them without opening settings.
+  flightwall_style:
+    name: Flightwall Style
+    options:
+      - dot-matrix
+      - split-flap
+    initial: dot-matrix
+    icon: mdi:view-dashboard-variant
+
 rest_command:
   # Fully Kiosk Browser remote administration. Requires the Plus licence.
   # Replace TABLET_IP and FULLY_PASSWORD, or delete this block entirely and

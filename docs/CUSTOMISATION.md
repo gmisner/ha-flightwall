@@ -185,3 +185,78 @@ line from the automation:
 ```
 
 Two systems fighting over the screen is the usual failure mode here. Let one own it.
+
+## Split-flap style
+
+The board is `www/splitflap.html`, served from `/local/flightwall/splitflap.html` and
+embedded in an iframe. Open it in a browser with no URL parameters to get a demo
+board — that is the fastest way to iterate, since you are not waiting for aircraft.
+
+### URL parameters
+
+| Parameter | Meaning | Default |
+|---|---|---|
+| `r1`–`r7` | Row values, in label order | demo text |
+| `l1`–`l8` | Label overrides | see below |
+| `p` | Progress, `0` to `cols` | `10` |
+| `cols` | Board width in characters | `16` |
+| `ms` | Milliseconds per flap step | `76` |
+
+Default labels: `FLIGHT`, `AIRCRAFT`, `AIRLINE`, `TO`, `ESTIMATED`, `ALTITUDE`,
+`AIRSPEED`, `PROGRESS`.
+
+The automation builds this URL with Jinja and `urlencode`. To change what a row says,
+edit the `r1`–`r7` assignments in the iframe card's `url:` template; to change what it
+is called, pass `l1`–`l8`. Labels are printed on the frame, not set in flaps, so
+changing them costs no animation time.
+
+### Board width
+
+Passing `cols` alone is not enough — three things must agree:
+
+1. `cols` in the URL
+2. the `[:16]` truncations in the automation's `url:` template
+3. the `* 16` in the progress calculation
+
+The page clamps `cols` to 8–48. Everything scales off `--cell-h`, which is
+`min(9.6vh, 94vw / 13.4)` — eight rows tall, and wide enough for the label column
+plus every cell. Raising `cols` much past 20 will overflow horizontally; adjust the
+`13.4` divisor to compensate.
+
+### Flap speed and feel
+
+`ms` is the dwell per step, default 76. Lower is faster and more frantic; above about
+120 the board takes uncomfortably long to settle.
+
+Total settle time is driven by the character set length, because a real board cycles
+through its physical sequence in order. `MAIN` has 46 entries, so a worst-case cell
+does 45 flips. Shortening `MAIN` speeds everything up at the cost of dropping
+characters — anything not in the set renders as a blank cell.
+
+Column stagger is in `start()`:
+
+```js
+setTimeout(function () { step(c); }, c.col * 52 + Math.random() * 90);
+```
+
+`c.col * 52` is the left-to-right sweep; the random term keeps columns from moving in
+lockstep. Set the random term to `0` for a rigid mechanical sweep, or drop the `col`
+term for all columns starting at once.
+
+### How a flap works
+
+Each cell holds four layers: static `top` and `bottom` halves showing the current
+character, plus two animating leaves. On each step the top leaf (old character) falls
+away while the bottom leaf (new character) swings up, and the static halves are
+swapped underneath at the halfway point so the seam never shows a mismatch.
+
+The `filter: brightness()` in the two keyframes is what sells the effect — the
+falling leaf darkens as it rotates away from the light, the rising one brightens.
+Remove it and the flip looks like a fold rather than a physical flap.
+
+### Colours
+
+Board `#08090b`, flap faces `#1a1c21`, lit faces `#23262c` during a flip, ink
+`#f4f3ef` (slightly warm, to read as painted flaps rather than backlit pixels),
+labels `#8b9099`, and the progress strip `#35ff7a`. All in `:root` at the top of the
+HTML.
