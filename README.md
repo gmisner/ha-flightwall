@@ -80,6 +80,32 @@ unchanged.
 
 ## Installation
 
+### HACS (guest-room TV, recommended)
+
+This is the path if you want the board on a Vizio / Chromecast TV. Do **not**
+also copy `packages/flightwall.yaml` — you would get duplicate entities.
+
+1. Install [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) via HACS, set coordinates and a **30 km** radius, and rename the flights-in-area sensor to `sensor.flightradar24_flights_in_area` if you want the default name.
+2. HACS → three dots → **Custom repositories** →
+   `https://github.com/gmisner/ha-flightwall` → type **Integration** → Add.
+3. Find **Flight Wall** in HACS and download it. Restart Home Assistant.
+4. **Settings → Devices & Services → Add integration → Flight Wall.**
+   Pick the FR24 flights sensor, the Vizio `media_player` (power), and the
+   Chromecast `media_player` on that TV.
+5. Home Assistant must be reachable over **HTTPS** (Nabu Casa or
+   `external_url`). Cast does nothing over plain HTTP.
+6. Leave `switch.flightwall_tv` on. Put it on a dashboard if someone in
+   that room will want Netflix instead.
+
+The integration creates `sensor.flightwall_flight`, the inbound binary
+sensor, the TV switch, and a **Flightwall** sidebar dashboard. Turning the
+TV on with the remote should show the board after about ten seconds.
+
+Tablet LED / split-flap popup is still the manual package path below
+(browser-mod, card-mod, stack-in-card).
+
+### Manual package (tablet popup)
+
 ### 1. Set up Flightradar24
 
 Install via HACS, add the integration, and set your coordinates and a radius. **Start

@@ -17,7 +17,16 @@ AirPlay on the Vizio is manual screen mirroring from an iPhone, iPad, or
 Mac. Home Assistant cannot start AirPlay. Use it to preview. Day to day
 is Cast.
 
-## One-time setup
+## HACS
+
+If you installed Flight Wall from HACS, skip the file copies and the TV
+automation paste. Add the integration, pick the two TV entities, leave
+`switch.flightwall_tv` on. The integration creates the dashboard and
+casts it when the TV comes on.
+
+Do not also install `packages/flightwall.yaml`.
+
+## Manual setup (without HACS)
 
 You need **two** `media_player` entities. They are easy to mix up.
 

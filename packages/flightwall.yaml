@@ -1,5 +1,8 @@
 # Flight Wall - core entities
 #
+# Skip this file if you installed Flight Wall from HACS — the integration
+# already creates these entities.
+#
 # Drop this file in <config>/packages/ and make sure packages are enabled in
 # configuration.yaml:
 #

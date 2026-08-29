@@ -1,0 +1,39 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Flight Wall",
+        "description": "Pick the Flightradar24 flights-in-area sensor. For a guest-room TV, also pick the Vizio (power) and the Chromecast on that set.",
+        "data": {
+          "flights_entity": "Flights in area sensor",
+          "tv_enabled": "This room's TV is a flight board",
+          "tv_power": "TV power (Vizio)",
+          "tv_player": "Chromecast on that TV"
+        }
+      }
+    },
+    "error": {
+      "tv_player_required": "Choose the Chromecast media player if the TV is a flight board"
+    },
+    "abort": {
+      "already_configured": "Flight Wall is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Flight Wall",
+        "description": "Update the Flightradar24 sensor or the guest-room TV entities.",
+        "data": {
+          "flights_entity": "Flights in area sensor",
+          "tv_enabled": "This room's TV is a flight board",
+          "tv_power": "TV power (Vizio)",
+          "tv_player": "Chromecast on that TV"
+        }
+      }
+    },
+    "error": {
+      "tv_player_required": "Choose the Chromecast media player if the TV is a flight board"
+    }
+  }
+}
