@@ -22,7 +22,7 @@ https://www.hacs.xyz/docs/publish/include/
   (repo Settings → General → Social preview)
 - [x] No household-specific names in docs or config-flow copy
 - [x] HACS Action and hassfest pass with no `ignore` keys
-- [ ] Pull request open against [hacs/default](https://github.com/hacs/default)
+- [x] Pull request open against [hacs/default](https://github.com/hacs/default/pull/10480)
 
 ## What reviewers will look at
 
