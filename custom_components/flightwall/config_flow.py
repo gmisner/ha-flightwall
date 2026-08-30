@@ -11,14 +11,18 @@ from homeassistant.core import callback
 from homeassistant.helpers.selector import selector
 
 from .const import (
+    CONF_BOARD_STYLE,
     CONF_FLIGHTS_ENTITY,
     CONF_TV_ENABLED,
     CONF_TV_PLAYER,
     CONF_TV_POWER,
     CONF_UNITS,
+    DEFAULT_BOARD_STYLE,
     DEFAULT_FLIGHTS_ENTITY,
     DEFAULT_UNITS,
     DOMAIN,
+    STYLE_LED,
+    STYLE_PLAIN,
     UNIT_IMPERIAL,
     UNIT_METRIC,
 )
@@ -58,6 +62,26 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                             {
                                 "value": UNIT_METRIC,
                                 "label": "Metric (m, km/h, km)",
+                            },
+                        ],
+                        "mode": "dropdown",
+                    }
+                }
+            ),
+            vol.Required(
+                CONF_BOARD_STYLE,
+                default=defaults.get(CONF_BOARD_STYLE, DEFAULT_BOARD_STYLE),
+            ): selector(
+                {
+                    "select": {
+                        "options": [
+                            {
+                                "value": STYLE_LED,
+                                "label": "LED grid",
+                            },
+                            {
+                                "value": STYLE_PLAIN,
+                                "label": "Plain large type",
                             },
                         ],
                         "mode": "dropdown",

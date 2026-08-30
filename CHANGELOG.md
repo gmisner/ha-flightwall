@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.7.0
+
+- TV board refreshes about once a minute (altitude, speed, clock) while Cast
+  is showing the board, and immediately when the selected aircraft changes
+- Keepalive no longer steals the set if someone switched to Netflix or
+  another source; takeover only happens when the TV is turned on or the
+  Flight Wall switch is armed
+- Empty sky shows a clock and the last aircraft overhead
+- Route line adds city names, registration, heading, and a NEXT flight when
+  a second aircraft is in range
+- Configure **Board style**: LED grid (default) or plain large type
+- Airline logos are cached and scaled once from the 128 px source
+
+## 1.6.2
+
+- TV board is 4K (3840×2160) with a finer LED grid
+- Configure **Units**: Imperial (ft, kt, mi) or Metric (m, km/h, km)
+
 ## 1.5.1
 
 - Register the Flightwall dashboard on the sidebar using the current

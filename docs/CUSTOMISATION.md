@@ -24,8 +24,9 @@ Two values, and they are independent:
 
 ### Guest-room TV
 
-Walkthrough in [TV.md](TV.md). The board appears when the TV is turned on
-and stays until the TV is turned off. Helpers:
+Walkthrough in [TV.md](TV.md). The HACS integration writes a 4K PNG and
+Casts it. Units and LED vs plain type are under the integration's
+Configure dialog. Helpers for the manual package path:
 
 - `input_boolean.flightwall_tv` — leave on; off means that room is for TV
 - `input_text.flightwall_tv_power` — Vizio `media_player` (on/off)

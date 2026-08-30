@@ -93,9 +93,15 @@ also copy `packages/flightwall.yaml` — you would get duplicate entities.
    Pick the FR24 flights sensor, the Vizio `media_player` (power), and the
    Chromecast `media_player` on that TV.
 5. Home Assistant must be reachable over **HTTPS** (Nabu Casa or
-   `external_url`). Cast does nothing over plain HTTP.
+   `external_url`) for Cast discovery. The board image itself is sent over
+   the LAN (`http://…:8123/local/flightwall-board.png`).
 6. Leave `switch.flightwall_tv` on. Put it on a dashboard if someone in
-   that room will want Netflix instead.
+   that room will want Netflix instead. While the switch is on, turning
+   the TV on with the remote takes over Cast. If they then switch to
+   another app, Flight Wall stays out of the way until the set is turned
+   off and on again, or you re-arm the switch.
+7. Units and board style (LED grid or plain large type) are under
+   **Settings → Devices & Services → Flight Wall → Configure**.
 
 The integration creates `sensor.flightwall_flight`, the inbound binary
 sensor, the TV switch, and a **Flightwall** sidebar dashboard. Turning the
@@ -230,10 +236,10 @@ Everything worth changing is documented in
 - **The dot-matrix effect softens text by design.** It cuts holes in every glyph. The
   mask spacing and the faux-bold `text-shadow` are tuned as a compromise; see
   CUSTOMISATION for the two values to adjust.
-- **A Vizio cannot show the LED or split-flap styles.** Those need a browser.
-  Google Cast gets a large-type markdown board that stays up while the TV
-  is on. AirPlay is manual mirroring from an Apple device, not something
-  HA can start. See [docs/TV.md](docs/TV.md).
+- **A Vizio cannot run the tablet LED or split-flap pages.** Those need a
+  browser. The guest-room path sends a 4K board image over Cast instead
+  (LED grid or plain large type). AirPlay is manual mirroring from an
+  Apple device, not something HA can start. See [docs/TV.md](docs/TV.md).
 
 ## Trademarks and affiliation
 

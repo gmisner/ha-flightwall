@@ -6,17 +6,15 @@ from math import atan
 from typing import Any
 
 
-def pick_best_flight(
+def rank_flights(
     flights: list[dict[str, Any]] | None,
     min_altitude_ft: float = 500,
-) -> dict[str, Any] | None:
-    """Return the flight with the highest elevation angle, or None."""
+) -> list[dict[str, Any]]:
+    """Return flights highest-elevation first, skipping aircraft on the ground."""
     if not flights:
-        return None
+        return []
 
-    best: dict[str, Any] | None = None
-    score = -1.0
-
+    ranked: list[tuple[float, dict[str, Any]]] = []
     for flight in flights:
         if "altitude" not in flight or "distance" not in flight:
             continue
@@ -33,12 +31,19 @@ def pick_best_flight(
 
         altitude_m = altitude_ft * 0.3048
         distance_m = max(distance_km * 1000, 50)
-        elevation = atan(altitude_m / distance_m)
-        if elevation > score:
-            score = elevation
-            best = flight
+        ranked.append((atan(altitude_m / distance_m), flight))
 
-    return best
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    return [flight for _score, flight in ranked]
+
+
+def pick_best_flight(
+    flights: list[dict[str, Any]] | None,
+    min_altitude_ft: float = 500,
+) -> dict[str, Any] | None:
+    """Return the flight with the highest elevation angle, or None."""
+    ranked = rank_flights(flights, min_altitude_ft)
+    return ranked[0] if ranked else None
 
 
 def callsign_of(flight: dict[str, Any] | None) -> str:

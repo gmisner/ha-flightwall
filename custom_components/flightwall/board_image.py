@@ -1,4 +1,4 @@
-"""Render a dot-matrix Flight Wall PNG for Chromecast Default Media Receiver."""
+"""Render a Flight Wall PNG for Chromecast Default Media Receiver."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from urllib.request import urlopen
 
 from PIL import Image, ImageDraw, ImageFont
 
-from .const import UNIT_IMPERIAL, UNIT_METRIC
+from .const import STYLE_LED, UNIT_IMPERIAL, UNIT_METRIC
 
 FONT_PATH = Path(__file__).parent / "fonts" / "Roboto-Bold.ttf"
 # 4K canvas so a 50"+ set is not stretching a 1080p LED grid.
@@ -24,6 +24,10 @@ GREEN = (53, 255, 122)
 GREEN_DIM = (20, 70, 40)
 LOGO_TILE = (214, 214, 214)
 LOGO_URL = "https://images.kiwi.com/airlines/128/{iata}.png"
+LOGO_TARGET = 220
+CARDINALS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+
+_LOGO_CACHE: dict[str, Image.Image | None] = {}
 
 
 def _s(value: int) -> int:
@@ -44,10 +48,54 @@ def _clean(value: Any, fallback: str = "") -> str:
     return text
 
 
+def _clip(text: str, limit: int) -> str:
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    return text[: max(limit - 1, 1)].rstrip()
+
+
 def _ago(seconds: int) -> str:
+    seconds = max(int(seconds), 0)
     if seconds >= 3600:
         return f"{seconds // 3600}H {(seconds % 3600) // 60}M"
     return f"{seconds // 60}M"
+
+
+def _heading_label(flight: dict[str, Any]) -> str:
+    raw = flight.get("heading")
+    if raw is None:
+        raw = flight.get("track")
+    try:
+        degrees = float(raw)
+    except (TypeError, ValueError):
+        return ""
+    return f"HDG {CARDINALS[int((degrees + 22.5) // 45) % 8]}"
+
+
+def _route(flight: dict[str, Any]) -> str:
+    origin = _clean(flight.get("airport_origin_code_iata"))
+    dest = _clean(flight.get("airport_destination_code_iata"))
+    if origin and dest:
+        return f"{origin}-{dest}"
+    return _clean(flight.get("callsign")) or _clean(
+        flight.get("aircraft_registration"), "IN FLIGHT"
+    )
+
+
+def _cities(flight: dict[str, Any]) -> str:
+    origin = _clip(_clean(flight.get("airport_origin_city")).upper(), 18)
+    dest = _clip(_clean(flight.get("airport_destination_city")).upper(), 18)
+    if origin and dest:
+        return f"{origin}  TO  {dest}"
+    return origin or dest
+
+
+def _clock_text(now: datetime, units: str) -> str:
+    if units == UNIT_METRIC:
+        return now.strftime("%H:%M")
+    hour = now.hour % 12 or 12
+    return f"{hour}:{now.strftime('%M')} {now.strftime('%p')}".upper()
 
 
 def _format_stats(flight: dict[str, Any], units: str) -> list[str]:
@@ -74,17 +122,29 @@ def _format_stats(flight: dict[str, Any], units: str) -> list[str]:
     return stats
 
 
-def _airline_logo(iata: str) -> Image.Image | None:
+def _load_logo(iata: str) -> Image.Image | None:
     code = _clean(iata).upper()
     if not code:
         return None
+    if code in _LOGO_CACHE:
+        return _LOGO_CACHE[code]
     try:
         with urlopen(LOGO_URL.format(iata=code), timeout=6) as response:
             logo = Image.open(BytesIO(response.read())).convert("RGBA")
     except OSError:
+        _LOGO_CACHE[code] = None
         return None
-    logo = logo.resize((80, 80), Image.Resampling.BILINEAR)
-    return logo.resize((_s(220), _s(220)), Image.Resampling.NEAREST)
+    _LOGO_CACHE[code] = logo
+    return logo
+
+
+def _airline_logo(iata: str, style: str) -> Image.Image | None:
+    logo = _load_logo(iata)
+    if logo is None:
+        return None
+    size = (_s(LOGO_TARGET), _s(LOGO_TARGET))
+    resample = Image.Resampling.NEAREST if style == STYLE_LED else Image.Resampling.LANCZOS
+    return logo.resize(size, resample)
 
 
 def _dot_matrix(image: Image.Image, cell: int = CELL) -> Image.Image:
@@ -104,10 +164,20 @@ def _dot_matrix(image: Image.Image, cell: int = CELL) -> Image.Image:
     return Image.alpha_composite(led, overlay).convert("RGB")
 
 
+def _finish(image: Image.Image, style: str) -> bytes:
+    if style == STYLE_LED:
+        image = _dot_matrix(image)
+    return _png_bytes(image)
+
+
 def render_board_png(
     flight: dict[str, Any] | None,
     now: datetime | None = None,
     units: str = UNIT_IMPERIAL,
+    style: str = STYLE_LED,
+    last_flight: dict[str, Any] | None = None,
+    last_seen: datetime | None = None,
+    next_flight: dict[str, Any] | None = None,
 ) -> bytes:
     """Return PNG bytes for the current flight, or the empty-sky board."""
     now = now or datetime.now(UTC)
@@ -115,16 +185,94 @@ def render_board_png(
     draw = ImageDraw.Draw(image)
     callsign_font = _font(40)
     route_font = _font(168)
+    clock_font = _font(180)
     body_font = _font(48)
     stats_font = _font(42)
 
     if not flight:
-        draw.rectangle((_s(120), _s(280), _s(520), _s(360)), fill=WHITE)
-        draw.text((_s(120), _s(460)), "WAITING FOR TRAFFIC", font=body_font, fill=MUTED)
-        return _png_bytes(_dot_matrix(image))
+        return _finish(
+            _draw_empty(
+                image,
+                draw,
+                now,
+                units,
+                last_flight,
+                last_seen,
+                clock_font,
+                body_font,
+                stats_font,
+            ),
+            style,
+        )
 
+    return _finish(
+        _draw_flight(
+            image,
+            draw,
+            flight,
+            now,
+            units,
+            style,
+            next_flight,
+            callsign_font,
+            route_font,
+            body_font,
+            stats_font,
+        ),
+        style,
+    )
+
+
+def _draw_empty(
+    image: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    now: datetime,
+    units: str,
+    last_flight: dict[str, Any] | None,
+    last_seen: datetime | None,
+    clock_font: ImageFont.ImageFont,
+    body_font: ImageFont.ImageFont,
+    stats_font: ImageFont.ImageFont,
+) -> Image.Image:
+    left = _s(120)
+    draw.text(
+        (left, _s(80)),
+        f"{now.strftime('%a')} {now.day} {now.strftime('%b')}".upper(),
+        font=stats_font,
+        fill=MUTED,
+    )
+    draw.text((left, _s(180)), _clock_text(now, units), font=clock_font, fill=WHITE)
+    draw.text((left, _s(460)), "WAITING FOR TRAFFIC", font=body_font, fill=MUTED)
+
+    if last_flight:
+        callsign = _clean(last_flight.get("callsign")) or _clean(
+            last_flight.get("aircraft_registration"), "LAST FLIGHT"
+        )
+        route = _route(last_flight)
+        draw.text((left, _s(600)), "LAST OVERHEAD", font=stats_font, fill=MUTED)
+        draw.text((left, _s(680)), f"{callsign}  {route}", font=body_font, fill=WHITE)
+        if last_seen is not None:
+            elapsed = int((now - last_seen).total_seconds())
+            seen = "JUST NOW" if elapsed < 60 else f"{_ago(elapsed)} AGO"
+            draw.text((left, _s(760)), seen, font=body_font, fill=WHITE)
+    return image
+
+
+def _draw_flight(
+    image: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    flight: dict[str, Any],
+    now: datetime,
+    units: str,
+    style: str,
+    next_flight: dict[str, Any] | None,
+    callsign_font: ImageFont.ImageFont,
+    route_font: ImageFont.ImageFont,
+    body_font: ImageFont.ImageFont,
+    stats_font: ImageFont.ImageFont,
+) -> Image.Image:
     iata = _clean(flight.get("airline_iata"))
-    logo = _airline_logo(iata)
+    logo = _airline_logo(iata, style)
     draw.rounded_rectangle(
         (_s(80), _s(280), _s(360), _s(560)), radius=_s(8), fill=LOGO_TILE
     )
@@ -143,10 +291,11 @@ def render_board_png(
     if len(airline) > 22:
         airline = airline[:21].rstrip()
     heading = f"{callsign} ({airline})" if airline else callsign
-    origin = _clean(flight.get("airport_origin_code_iata"))
-    dest = _clean(flight.get("airport_destination_code_iata"))
-    route = f"{origin}-{dest}" if origin and dest else callsign
+    route = _route(flight)
+    cities = _cities(flight)
     model = _clean(flight.get("aircraft_model")) or _clean(flight.get("aircraft_code"))
+    registration = _clean(flight.get("aircraft_registration")).upper()
+    direction = _heading_label(flight)
     origin_city = _clean(flight.get("airport_origin_city"))
     dest_city = _clean(flight.get("airport_destination_city"))
 
@@ -154,9 +303,14 @@ def render_board_png(
     draw.text((left, y), heading.upper(), font=callsign_font, fill=MUTED)
     y = _s(150)
     draw.text((left, y), route, font=route_font, fill=WHITE)
-    y = _s(360)
-    if model:
-        draw.text((left, y), model.upper(), font=body_font, fill=MUTED)
+    y = _s(340)
+    if cities:
+        draw.text((left, y), cities, font=stats_font, fill=MUTED)
+        y = _s(420)
+
+    detail_bits = [bit for bit in (model.upper() if model else "", registration, direction) if bit]
+    if detail_bits:
+        draw.text((left, y), "  ·  ".join(detail_bits), font=body_font, fill=MUTED)
         y += _s(80)
 
     now_ts = int(now.timestamp())
@@ -205,7 +359,20 @@ def render_board_png(
             color = GREEN if i < progress else GREEN_DIM
             draw.rounded_rectangle((x, y, x + size, y + size), radius=_s(4), fill=color)
 
-    return _png_bytes(_dot_matrix(image))
+    if next_flight:
+        next_callsign = _clean(next_flight.get("callsign")) or _clean(
+            next_flight.get("aircraft_registration")
+        )
+        next_route = _route(next_flight)
+        if next_callsign:
+            draw.text(
+                (_s(120), _s(980)),
+                f"NEXT  {next_callsign}  {next_route}",
+                font=stats_font,
+                fill=MUTED,
+            )
+
+    return image
 
 
 def _png_bytes(image: Image.Image) -> bytes:
@@ -218,6 +385,21 @@ def write_board_png(
     path: Path,
     flight: dict[str, Any] | None,
     units: str = UNIT_IMPERIAL,
+    now: datetime | None = None,
+    style: str = STYLE_LED,
+    last_flight: dict[str, Any] | None = None,
+    last_seen: datetime | None = None,
+    next_flight: dict[str, Any] | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(render_board_png(flight, units=units))
+    path.write_bytes(
+        render_board_png(
+            flight,
+            now=now,
+            units=units,
+            style=style,
+            last_flight=last_flight,
+            last_seen=last_seen,
+            next_flight=next_flight,
+        )
+    )

@@ -7,12 +7,13 @@ done. Home Assistant never powers the set down.
 
 The tablet popup is separate. This page is only the TV.
 
-A Vizio cannot run the LED or split-flap styles. SmartCast is not a
-browser, and many built-in Chromecasts cannot load the live Home
+A Vizio cannot run the tablet LED or split-flap pages. SmartCast is not
+a browser, and many built-in Chromecasts cannot load a live Home
 Assistant dashboard. Flight Wall switches the set to the Cast app and
-sends a full-screen board image instead: airline, callsign, route, type,
-times, altitude, speed, progress. Empty sky shows `WAITING FOR TRAFFIC`
-until the next one.
+sends a 4K board image: airline, callsign, route, cities, type,
+registration, heading, times, altitude, speed, progress, and the next
+aircraft when a second one is in range. Empty sky shows a clock and the
+last flight overhead.
 
 AirPlay on the Vizio is manual screen mirroring from an iPhone, iPad, or
 Mac. Home Assistant cannot start AirPlay. Use it to preview. Day to day
@@ -22,9 +23,17 @@ is Cast.
 
 If you installed Flight Wall from HACS, skip the file copies and the TV
 automation paste. Add the integration, pick the two TV entities, leave
-`switch.flightwall_tv` on. The integration creates the dashboard and
-casts it when the TV comes on. Units (imperial or metric) are under
-**Settings → Devices & Services → Flight Wall → Configure**.
+`switch.flightwall_tv` on. The integration writes
+`/local/flightwall-board.png` and plays that image on the Chromecast
+when the TV comes on. It refreshes about once a minute while Cast is
+showing the board, and immediately when the selected aircraft changes.
+If someone switches the set to Netflix or another source, Flight Wall
+does not take over again until the TV is turned off and on, or you
+re-arm the switch.
+
+Units (imperial or metric) and board style (LED grid or plain large
+type) are under **Settings → Devices & Services → Flight Wall →
+Configure**.
 
 Do not also install `packages/flightwall.yaml`.
 
@@ -82,20 +91,37 @@ these entries next to what is there. Do not set `resource_mode: yaml`
 unless you already load resources from YAML — that would drop HACS cards
 from your other dashboards.
 
-### Test Cast by hand
+### Test the board image by hand
 
-```yaml
-action: cast.show_lovelace_view
-data:
-  entity_id: media_player.YOUR_CAST_PLAYER
-  dashboard_path: flight-wall
-  view_path: board
+Open the PNG Home Assistant is serving:
+
+```
+http://YOUR_HA:8123/local/flightwall-board.png
 ```
 
-Then: boolean on, TV off, TV on with the remote. After about ten seconds
-the board should appear. It re-casts every three minutes and when the
-selected aircraft changes, so the Vizio idle screen does not win.
-Nothing in this project turns the TV off.
+Then play it on the Chromecast:
+
+```yaml
+action: media_player.select_source
+data:
+  entity_id: media_player.YOUR_VIZIO
+  source: Cast
+```
+
+```yaml
+action: media_player.play_media
+data:
+  entity_id: media_player.YOUR_CAST_PLAYER
+  media_content_id: http://YOUR_HA:8123/local/flightwall-board.png
+  media_content_type: image/png
+```
+
+Then: switch on, TV off, TV on with the remote. After about ten seconds
+the board should appear. While Cast is showing it, the image refreshes
+about once a minute. Nothing in this project turns the TV off.
+
+Do **not** use `cast.show_lovelace_view` on a 2019 Vizio. The built-in
+Chromecast often cannot load the live Home Assistant dashboard.
 
 ## AirPlay (preview only)
 
@@ -124,9 +150,11 @@ Chromecast to wake.
 pointing at the Cast entity. Periodic re-cast will then keep waking the
 set. The Vizio entity must be the power helper.
 
-**“Configuration error” on the TV.** A custom card landed on the view.
-`dashboards/flightwall.yaml` must stay core markdown only.
+**Someone wants to watch a movie in that room.** They can switch to
+Netflix (or any other source) with the remote. Flight Wall will not
+steal the set back. Turning the TV off and on, or flipping
+`switch.flightwall_tv` / `input_boolean.flightwall_tv` off and on,
+makes it a flight board again.
 
-**Someone wants to watch a movie in that room.** Turn
-`input_boolean.flightwall_tv` off before they use the remote. Turn it
-back on when the room is a flight board again.
+**Board looks soft on a large set.** Use **Configure → Board style →
+Plain large type** to drop the LED grid. The image is 4K either way.

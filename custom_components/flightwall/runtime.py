@@ -8,6 +8,7 @@ from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
@@ -22,19 +23,24 @@ from homeassistant.helpers.network import get_url
 from .board_image import write_board_png
 from .const import (
     BOARD_PNG_NAME,
+    CONF_BOARD_STYLE,
     CONF_FLIGHTS_ENTITY,
     CONF_TV_PLAYER,
     CONF_TV_POWER,
     CONF_UNITS,
+    DEFAULT_BOARD_STYLE,
     DEFAULT_FLIGHTS_ENTITY,
     DEFAULT_UNITS,
     INBOUND_DELAY_OFF,
     MIN_ALTITUDE_FT,
     TV_CAST_SOURCE,
+    TV_CAST_SOURCES,
+    TV_IDLE_SOURCES,
     TV_KEEPALIVE,
     TV_POWER_ON_DELAY,
+    TV_TAKEOVER_REASONS,
 )
-from .flight import callsign_of, pick_best_flight
+from .flight import callsign_of, rank_flights
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,6 +55,9 @@ class FlightwallRuntime:
         self.entry = entry
         self.callsign = "none"
         self.flight: dict[str, Any] | None = None
+        self.next_flight: dict[str, Any] | None = None
+        self.last_flight: dict[str, Any] | None = None
+        self.last_seen: datetime | None = None
         self.inbound = False
         self.tv_enabled = False
         self._listeners: list[Callable[[], None]] = []
@@ -71,6 +80,10 @@ class FlightwallRuntime:
     @property
     def units(self) -> str:
         return self.entry.data.get(CONF_UNITS, DEFAULT_UNITS)
+
+    @property
+    def board_style(self) -> str:
+        return self.entry.data.get(CONF_BOARD_STYLE, DEFAULT_BOARD_STYLE)
 
     def async_add_listener(self, update: Callable[[], None]) -> Callable[[], None]:
         self._listeners.append(update)
@@ -131,6 +144,12 @@ class FlightwallRuntime:
     def _keepalive(self, _now: datetime) -> None:
         self.hass.add_job(self.async_cast(reason="keep"))
 
+    def _local_now(self) -> datetime:
+        try:
+            return datetime.now(ZoneInfo(self.hass.config.time_zone))
+        except (KeyError, ValueError):
+            return datetime.now().astimezone()
+
     def _refresh_flight(self) -> None:
         state = self.hass.states.get(self.flights_entity)
         flights = []
@@ -139,8 +158,15 @@ class FlightwallRuntime:
             if isinstance(raw, list):
                 flights = [f for f in raw if isinstance(f, dict)]
 
-        self.flight = pick_best_flight(flights, MIN_ALTITUDE_FT)
-        self.callsign = callsign_of(self.flight)
+        ranked = rank_flights(flights, MIN_ALTITUDE_FT)
+        selected = ranked[0] if ranked else None
+        nxt = ranked[1] if len(ranked) > 1 else None
+        if selected is not None:
+            self.last_flight = dict(selected)
+            self.last_seen = self._local_now()
+        self.flight = selected
+        self.next_flight = nxt
+        self.callsign = callsign_of(selected)
         self._set_inbound(len(flights) > 0)
         self._notify()
 
@@ -169,6 +195,46 @@ class FlightwallRuntime:
         state = self.hass.states.get(self.tv_power)
         return state is not None and state.state not in OFF_STATES
 
+    def _tv_source(self) -> str:
+        if not self.tv_power:
+            return ""
+        state = self.hass.states.get(self.tv_power)
+        if state is None:
+            return ""
+        return str(state.attributes.get("source") or "").strip().lower()
+
+    def _player_showing_board(self) -> bool:
+        if not self.tv_player:
+            return False
+        player = self.hass.states.get(self.tv_player)
+        if player is None or player.state not in {"playing", "paused"}:
+            return False
+        content = str(player.attributes.get("media_content_id") or "")
+        if BOARD_PNG_NAME in content:
+            return True
+        app = str(player.attributes.get("app_name") or "").lower()
+        return "default media receiver" in app
+
+    def _tv_showing_board(self) -> bool:
+        """True when this set is already on Cast / our image."""
+        if self._tv_source() in TV_CAST_SOURCES:
+            return True
+        return self._player_showing_board()
+
+    def _tv_is_other_app(self) -> bool:
+        """True when someone picked Netflix, HDMI, or another real app."""
+        source = self._tv_source()
+        if not source or source in TV_CAST_SOURCES or source in TV_IDLE_SOURCES:
+            return False
+        return True
+
+    def _should_refresh_board(self) -> bool:
+        if self._tv_showing_board():
+            return True
+        if self._tv_is_other_app():
+            return False
+        return self._tv_source() in TV_IDLE_SOURCES
+
     async def async_set_tv_enabled(self, enabled: bool) -> None:
         self.tv_enabled = enabled
         if enabled:
@@ -187,6 +253,9 @@ class FlightwallRuntime:
             return
         if reason != "armed" and not self._tv_is_on():
             return
+        if reason not in TV_TAKEOVER_REASONS and not self._should_refresh_board():
+            _LOGGER.debug("Skip Flight Wall cast (%s); TV is on another source", reason)
+            return
 
         if delay:
             if self._cast_delay_unsub:
@@ -203,9 +272,19 @@ class FlightwallRuntime:
 
         try:
             await self.hass.async_add_executor_job(
-                write_board_png, self._board_path(), self.flight, self.units
+                write_board_png,
+                self._board_path(),
+                self.flight,
+                self.units,
+                self._local_now(),
+                self.board_style,
+                self.last_flight if self.flight is None else None,
+                self.last_seen if self.flight is None else None,
+                self.next_flight,
             )
-            if self.tv_power:
+            if self.tv_power and (
+                reason in TV_TAKEOVER_REASONS or self._tv_source() in TV_IDLE_SOURCES
+            ):
                 await self.hass.services.async_call(
                     "media_player",
                     "select_source",

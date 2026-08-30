@@ -57,4 +57,8 @@ class FlightwallFlightSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"flight": self._runtime.flight}
+        return {
+            "flight": self._runtime.flight,
+            "next_flight": self._runtime.next_flight,
+            "last_flight": self._runtime.last_flight,
+        }
