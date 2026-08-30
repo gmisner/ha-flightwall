@@ -3,6 +3,9 @@
 ## 1.10.0
 
 - Add pytest coverage for flight ranking and board text, plus a GitHub Actions check
+- Refresh the TV only while Cast is showing the board (or the source is
+  still unknown). Named apps including the TV home screen are left alone
+- Add `flightwall.recast` and a config-entry diagnostics dump
 
 ## 1.9.2
 

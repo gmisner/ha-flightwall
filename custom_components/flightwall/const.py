@@ -41,17 +41,8 @@ TV_POWER_ON_DELAY = timedelta(seconds=10)
 TV_KEEPALIVE = timedelta(minutes=1)
 TV_CAST_SOURCE = "Cast"
 TV_CAST_SOURCES = frozenset({"cast", "chromecast", "google cast"})
-TV_IDLE_SOURCES = frozenset(
-    {
-        "smartcast home",
-        "smartcast",
-        "home",
-        "watchfree+",
-        "watchfree",
-        "watchfree+ home",
-    }
-)
 TV_TAKEOVER_REASONS = frozenset({"tv_on", "armed"})
+SERVICE_RECAST = "recast"
 BOARD_PNG_NAME = "flightwall-board.png"
 
 DASHBOARD_PATH = "flight-wall"

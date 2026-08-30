@@ -6,11 +6,12 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, Platform
-from homeassistant.core import Event, HomeAssistant
+from homeassistant.core import Event, HomeAssistant, ServiceCall
 
-from .const import DOMAIN
+from .const import DOMAIN, SERVICE_RECAST
 from .dashboard import async_ensure_dashboard, async_write_theme
 from .runtime import FlightwallRuntime
+from .tv import RECAST_REASON
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+    _async_register_services(hass)
     return True
 
 
@@ -49,8 +51,22 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime: FlightwallRuntime | None = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     if runtime is not None:
         await runtime.async_unload()
+    if not hass.data.get(DOMAIN) and hass.services.has_service(DOMAIN, SERVICE_RECAST):
+        hass.services.async_remove(DOMAIN, SERVICE_RECAST)
     return unload_ok
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _async_register_services(hass: HomeAssistant) -> None:
+    if hass.services.has_service(DOMAIN, SERVICE_RECAST):
+        return
+
+    async def _recast(_call: ServiceCall) -> None:
+        for runtime in hass.data.get(DOMAIN, {}).values():
+            if isinstance(runtime, FlightwallRuntime):
+                await runtime.async_cast(reason=RECAST_REASON)
+
+    hass.services.async_register(DOMAIN, SERVICE_RECAST, _recast)

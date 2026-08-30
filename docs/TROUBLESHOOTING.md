@@ -157,3 +157,7 @@ Walkthrough is in [TV.md](TV.md). In order:
 The board should appear about ten seconds after the TV is turned on.
 Home Assistant will not turn the TV off. AirPlay is screen mirroring
 from an Apple device only.
+
+If the set is on and still blank, call `flightwall.recast` or download
+diagnostics from the Flight Wall device page. Keepalive will not steal
+the TV back from Netflix, HDMI, or the television home screen.

@@ -1,0 +1,3 @@
+recast:
+  name: Show board on TV
+  description: Switch the television to Cast and show the current Flight Wall board. Does nothing if the set is off.
