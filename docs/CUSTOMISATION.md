@@ -8,7 +8,11 @@
 |---|---|
 | **Units** | Imperial (ft, kt, mi) or Metric (m, km/h, km) |
 | **Display** | **Image** — 4K PNG over Cast (use on older Chromecasts). **Live** — Home Assistant dashboard (browser, tablet, or a Chromecast that can load HA). Live falls back to the image if Cast never connects. |
-| **Theme** | LED night, plain large type, amber departures, or split-flap |
+| **Theme** | LED night, plain large type, amber departures, split-flap, or night dim |
+| **Minimum altitude** | Ignore aircraft at or below this (default 500 ft) |
+| **Clock** | Follow units, or force 12-hour / 24-hour |
+| **Show airline marks** | Off hides the logo column and does not fetch Kiwi CDN images |
+| **Quiet hours** | Skip TV takeover and keepalive between the start and end times. `flightwall.recast` still works |
 | **This TV is a flight board** | Same as `switch.flightwall_tv`. Off leaves the set alone. |
 
 TV walkthrough: [TV.md](TV.md). The rest of this page is the optional tablet

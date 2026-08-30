@@ -11,7 +11,14 @@ from urllib.request import urlopen
 from PIL import Image, ImageDraw, ImageFont
 
 from .board_copy import build_board
-from .const import STYLE_AMBER, STYLE_LED, STYLE_SPLITFLAP, UNIT_IMPERIAL
+from .const import (
+    STYLE_AMBER,
+    STYLE_LED,
+    STYLE_NIGHT,
+    STYLE_SPLITFLAP,
+    TIME_FOLLOW_UNITS,
+    UNIT_IMPERIAL,
+)
 
 FONT_PATH = Path(__file__).parent / "fonts" / "Roboto-Bold.ttf"
 CANVAS = (3840, 2160)
@@ -50,6 +57,16 @@ PALETTES = {
         "logo_tile": (48, 36, 16),
         "mark": (255, 184, 74),
         "grid": False,
+    },
+    STYLE_NIGHT: {
+        "bg": (4, 6, 10),
+        "ink": (140, 160, 190),
+        "muted": (70, 90, 120),
+        "bar": (30, 120, 80),
+        "bar_dim": (10, 30, 20),
+        "logo_tile": (20, 24, 32),
+        "mark": (80, 100, 140),
+        "grid": True,
     },
 }
 
@@ -160,6 +177,8 @@ def render_board_png(
     last_flight: dict[str, Any] | None = None,
     last_seen: datetime | None = None,
     next_flight: dict[str, Any] | None = None,
+    time_format: str = TIME_FOLLOW_UNITS,
+    show_logos: bool = True,
 ) -> bytes:
     """Return PNG bytes for the current flight, or the empty-sky board."""
     now = now or datetime.now(UTC)
@@ -171,6 +190,8 @@ def render_board_png(
         last_flight=last_flight,
         last_seen=last_seen,
         next_flight=next_flight,
+        time_format=time_format,
+        show_logos=show_logos,
     )
     if style == STYLE_SPLITFLAP:
         return _png_bytes(_draw_splitflap(board))
@@ -233,23 +254,25 @@ def _draw_flight(
     body_font: ImageFont.ImageFont,
     stats_font: ImageFont.ImageFont,
 ) -> None:
-    tile = colors["logo_tile"]
-    size = _s(260)
-    origin = (_s(80), _s(80))
-    logo = _airline_logo(board.logo_iata, style)
-    if logo is None:
-        logo = _generic_mark(int(size * 0.72), colors["mark"])
-    draw.rounded_rectangle(
-        (origin[0], origin[1], origin[0] + size, origin[1] + size),
-        radius=_s(8),
-        fill=tile,
-    )
-    box = Image.new("RGBA", (size, size), (*tile, 255))
-    lx = (size - logo.width) // 2
-    ly = (size - logo.height) // 2
-    box.paste(logo, (lx, ly), logo)
-    image.paste(box.convert("RGB"), origin)
-    left = origin[0] + size + _s(80)
+    left = _s(120)
+    if getattr(board, "show_logos", True):
+        tile = colors["logo_tile"]
+        size = _s(260)
+        origin = (_s(80), _s(80))
+        logo = _airline_logo(board.logo_iata, style)
+        if logo is None:
+            logo = _generic_mark(int(size * 0.72), colors["mark"])
+        draw.rounded_rectangle(
+            (origin[0], origin[1], origin[0] + size, origin[1] + size),
+            radius=_s(8),
+            fill=tile,
+        )
+        box = Image.new("RGBA", (size, size), (*tile, 255))
+        lx = (size - logo.width) // 2
+        ly = (size - logo.height) // 2
+        box.paste(logo, (lx, ly), logo)
+        image.paste(box.convert("RGB"), origin)
+        left = origin[0] + size + _s(80)
     y = _s(80)
     draw.text((left, y), board.title, font=callsign_font, fill=colors["muted"])
     y = _s(150)
@@ -379,6 +402,8 @@ def write_board_png(
     last_flight: dict[str, Any] | None = None,
     last_seen: datetime | None = None,
     next_flight: dict[str, Any] | None = None,
+    time_format: str = TIME_FOLLOW_UNITS,
+    show_logos: bool = True,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(
@@ -390,5 +415,7 @@ def write_board_png(
             last_flight=last_flight,
             last_seen=last_seen,
             next_flight=next_flight,
+            time_format=time_format,
+            show_logos=show_logos,
         )
     )

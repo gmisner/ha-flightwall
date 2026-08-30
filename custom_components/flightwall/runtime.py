@@ -27,17 +27,28 @@ from .const import (
     CONF_BOARD_STYLE,
     CONF_DISPLAY_MODE,
     CONF_FLIGHTS_ENTITY,
+    CONF_MIN_ALTITUDE,
+    CONF_QUIET_ENABLED,
+    CONF_QUIET_END,
+    CONF_QUIET_START,
+    CONF_SHOW_LOGOS,
     CONF_THEME,
+    CONF_TIME_FORMAT,
     CONF_TV_PLAYER,
     CONF_TV_POWER,
     CONF_UNITS,
     DEFAULT_DISPLAY_MODE,
     DEFAULT_FLIGHTS_ENTITY,
+    DEFAULT_MIN_ALTITUDE,
+    DEFAULT_QUIET_ENABLED,
+    DEFAULT_QUIET_END,
+    DEFAULT_QUIET_START,
+    DEFAULT_SHOW_LOGOS,
     DEFAULT_THEME,
+    DEFAULT_TIME_FORMAT,
     DEFAULT_UNITS,
     DISPLAY_LIVE,
     INBOUND_DELAY_OFF,
-    MIN_ALTITUDE_FT,
     THEME_HA,
     TV_CAST_SOURCE,
     TV_CAST_SOURCES,
@@ -47,7 +58,8 @@ from .const import (
 )
 from .dashboard import dashboard_path_for
 from .flight import callsign_of, rank_flights
-from .tv import TAKEOVER_REASONS, should_refresh_board, should_select_cast
+from .schedule import in_quiet_hours
+from .tv import RECAST_REASON, TAKEOVER_REASONS, should_refresh_board, should_select_cast
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -102,6 +114,33 @@ class FlightwallRuntime:
         return self.entry.data.get(CONF_DISPLAY_MODE, DEFAULT_DISPLAY_MODE)
 
     @property
+    def min_altitude_ft(self) -> float:
+        try:
+            return float(self.entry.data.get(CONF_MIN_ALTITUDE, DEFAULT_MIN_ALTITUDE))
+        except (TypeError, ValueError):
+            return float(DEFAULT_MIN_ALTITUDE)
+
+    @property
+    def time_format(self) -> str:
+        return self.entry.data.get(CONF_TIME_FORMAT, DEFAULT_TIME_FORMAT)
+
+    @property
+    def show_logos(self) -> bool:
+        return bool(self.entry.data.get(CONF_SHOW_LOGOS, DEFAULT_SHOW_LOGOS))
+
+    @property
+    def quiet_enabled(self) -> bool:
+        return bool(self.entry.data.get(CONF_QUIET_ENABLED, DEFAULT_QUIET_ENABLED))
+
+    def _in_quiet_hours(self) -> bool:
+        return in_quiet_hours(
+            self._local_now(),
+            enabled=self.quiet_enabled,
+            start=self.entry.data.get(CONF_QUIET_START, DEFAULT_QUIET_START),
+            end=self.entry.data.get(CONF_QUIET_END, DEFAULT_QUIET_END),
+        )
+
+    @property
     def ha_theme(self) -> str:
         return THEME_HA.get(self.board_style, THEME_HA[DEFAULT_THEME])
 
@@ -118,6 +157,8 @@ class FlightwallRuntime:
             last_flight=self.last_flight if self.flight is None else None,
             last_seen=self.last_seen if self.flight is None else None,
             next_flight=self.next_flight,
+            time_format=self.time_format,
+            show_logos=self.show_logos,
         ).as_dict()
 
     def async_add_listener(self, update: Callable[[], None]) -> Callable[[], None]:
@@ -195,7 +236,7 @@ class FlightwallRuntime:
             if isinstance(raw, list):
                 flights = [f for f in raw if isinstance(f, dict)]
 
-        ranked = rank_flights(flights, MIN_ALTITUDE_FT)
+        ranked = rank_flights(flights, self.min_altitude_ft)
         selected = ranked[0] if ranked else None
         nxt = ranked[1] if len(ranked) > 1 else None
         if selected is not None:
@@ -298,6 +339,8 @@ class FlightwallRuntime:
             self.last_flight if self.flight is None else None,
             self.last_seen if self.flight is None else None,
             self.next_flight,
+            self.time_format,
+            self.show_logos,
         )
 
     async def _select_cast_source(self, reason: str) -> None:
@@ -341,6 +384,9 @@ class FlightwallRuntime:
         if reason != "recast" and not self.tv_enabled:
             return
         if reason != "armed" and not self._tv_is_on():
+            return
+        if reason != RECAST_REASON and self._in_quiet_hours():
+            _LOGGER.debug("Skip Flight Wall cast (%s); quiet hours", reason)
             return
         if reason not in TAKEOVER_REASONS and not self._should_refresh_board():
             _LOGGER.debug("Skip Flight Wall cast (%s); TV is on another source", reason)

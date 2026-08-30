@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from flightwall.board_copy import build_board, clock_text, format_stats, progress_of
-from flightwall.const import UNIT_IMPERIAL, UNIT_METRIC
+from flightwall.const import TIME_12H, TIME_24H, UNIT_IMPERIAL, UNIT_METRIC
 
 
 FLIGHT = {
@@ -40,6 +40,8 @@ def test_clock_follows_units() -> None:
     noon = datetime(2026, 8, 30, 13, 5, tzinfo=UTC)
     assert clock_text(noon, UNIT_METRIC) == "13:05"
     assert clock_text(noon, UNIT_IMPERIAL) == "1:05 PM"
+    assert clock_text(noon, UNIT_IMPERIAL, TIME_24H) == "13:05"
+    assert clock_text(noon, UNIT_METRIC, TIME_12H) == "1:05 PM"
 
 
 def test_progress_is_zero_without_times() -> None:
@@ -57,6 +59,9 @@ def test_build_board_has_route_and_logo() -> None:
     assert board.logo_iata == "AA"
     assert board.title.startswith("AAL123")
     assert any(label == "FLIGHT" and value == "AAL123" for label, value in board.flap_rows)
+    hidden = build_board(FLIGHT, now=now, show_logos=False)
+    assert hidden.logo_iata == ""
+    assert hidden.show_logos is False
 
 
 def test_empty_sky_shows_last_flight() -> None:

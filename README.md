@@ -33,6 +33,7 @@ The HACS integration (TV path) has four themes under
 | **Plain large type** | Same colours, no grid — clearest on a large set |
 | **Amber departures** | Warm amber type on black |
 | **Split-flap** | Mechanical departure board (labels + 16-character flaps). Still image on TV; the tablet HTML page animates |
+| **Night dim** | Same layout as LED, much darker — a bedroom wall at night |
 
 Airline marks sit in a logo column. When Flightradar24 has no airline
 code, a generic aircraft mark is used so the layout stays the same.
@@ -121,7 +122,9 @@ down.
   on a tablet, Fully Kiosk, or a Chromecast with Google TV. If live
   Cast does not connect, Flight Wall falls back to the image.
 
-**Units:** Imperial (ft, kt, mi) or Metric (m, km/h, km).
+**Units:** Imperial (ft, kt, mi) or Metric (m, km/h, km). Clock can
+follow units or be forced to 12-hour / 24-hour. Minimum altitude,
+airline marks, and quiet hours are on the same Configure page.
 
 Full TV notes: [docs/TV.md](docs/TV.md).
 
