@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.1
+
+- Scale the split-flap board to fill a 16:9 TV instead of sitting in a
+  small island in the middle of the screen
+
 ## 1.9.0
 
 - Configure **Theme → Split-flap**: mechanical departure-board look on the

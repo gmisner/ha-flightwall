@@ -289,30 +289,48 @@ FLAP_LIT = (53, 255, 122)
 FLAP_LIT_DIM = (20, 40, 28)
 
 
+def _font_px(px: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    try:
+        return ImageFont.truetype(str(FONT_PATH), max(px, 8))
+    except OSError:
+        return ImageFont.load_default()
+
+
 def _draw_splitflap(board: Any) -> Image.Image:
-    """Static mechanical departure board. No logo — a flap board cannot show one."""
+    """Static mechanical departure board sized to fill a 16:9 TV."""
     image = Image.new("RGB", CANVAS, FLAP_BG)
     draw = ImageDraw.Draw(image)
-    cell_h = _s(84)
-    cell_w = _s(56)
-    gap = _s(6)
-    label_w = _s(220)
     rows = list(board.flap_rows)
-    line_h = cell_h + gap
-    board_h = line_h * (len(rows) + 1)
-    board_w = label_w + _s(24) + FLAP_COLS * cell_w + (FLAP_COLS - 1) * gap
+    n_rows = len(rows) + 1
+    margin_x = int(CANVAS[0] * 0.045)
+    margin_y = int(CANVAS[1] * 0.055)
+    avail_w = CANVAS[0] - 2 * margin_x
+    avail_h = CANVAS[1] - 2 * margin_y
+    label_w = int(avail_w * 0.16)
+    gutter = int(avail_w * 0.018)
+    cell_area_w = avail_w - label_w - gutter
+    cell_w = int(cell_area_w / (FLAP_COLS + (FLAP_COLS - 1) * 0.07))
+    cell_h = int(avail_h / (n_rows + (n_rows - 1) * 0.07))
+    if cell_h > int(cell_w * 1.55):
+        cell_h = int(cell_w * 1.55)
+    if cell_w > int(cell_h / 1.35):
+        cell_w = int(cell_h / 1.35)
+    gap = max(6, int(min(cell_w, cell_h) * 0.07))
+    board_w = label_w + gutter + FLAP_COLS * cell_w + (FLAP_COLS - 1) * gap
+    board_h = n_rows * cell_h + (n_rows - 1) * gap
     left = (CANVAS[0] - board_w) // 2
     top = (CANVAS[1] - board_h) // 2
-    label_font = _font(22)
-    char_font = _font(36)
+    label_font = _font_px(max(int(cell_h * 0.28), 28))
+    char_font = _font_px(max(int(cell_h * 0.48), 36))
+    radius = max(4, cell_h // 18)
 
     def flap_cell(x: int, y: int, char: str, lit: bool = False) -> None:
         face = FLAP_LIT if lit else FLAP_FACE
         top_face = (70, 200, 110) if lit else FLAP_FACE_TOP
-        draw.rounded_rectangle((x, y, x + cell_w, y + cell_h), radius=_s(4), fill=face)
+        draw.rounded_rectangle((x, y, x + cell_w, y + cell_h), radius=radius, fill=face)
         draw.rectangle((x, y, x + cell_w, y + cell_h // 2), fill=top_face)
         mid = y + cell_h // 2
-        draw.line((x + 2, mid, x + cell_w - 2, mid), fill=FLAP_SEAM, width=2)
+        draw.line((x + 3, mid, x + cell_w - 3, mid), fill=FLAP_SEAM, width=max(2, cell_h // 40))
         if char and char != " ":
             bbox = draw.textbbox((0, 0), char, font=char_font)
             tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -323,32 +341,29 @@ def _draw_splitflap(board: Any) -> Image.Image:
                 fill=FLAP_INK,
             )
 
-    y = top
-    for label, value in rows:
-        name = label.upper()
+    def draw_label(name: str, y: int) -> None:
         bbox = draw.textbbox((0, 0), name, font=label_font)
-        tw = bbox[2] - bbox[0]
+        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
         draw.text(
-            (left + label_w - tw, y + (cell_h - _s(22)) // 2),
+            (left + label_w - tw, y + (cell_h - th) // 2 - bbox[1]),
             name,
             font=label_font,
             fill=FLAP_LABEL,
         )
+
+    y = top
+    for label, value in rows:
+        draw_label(label.upper(), y)
         text = (value or "").upper()[:FLAP_COLS].ljust(FLAP_COLS)
-        x = left + label_w + _s(24)
+        x = left + label_w + gutter
         for char in text:
             flap_cell(x, y, char)
             x += cell_w + gap
-        y += line_h
+        y += cell_h + gap
 
-    draw.text(
-        (left, y + (cell_h - _s(22)) // 2),
-        "PROGRESS",
-        font=label_font,
-        fill=FLAP_LABEL,
-    )
+    draw_label("PROGRESS", y)
     filled = max(0, min(FLAP_COLS, round(board.progress * FLAP_COLS / 32)))
-    x = left + label_w + _s(24)
+    x = left + label_w + gutter
     for i in range(FLAP_COLS):
         flap_cell(x, y, "", lit=i < filled)
         x += cell_w + gap
