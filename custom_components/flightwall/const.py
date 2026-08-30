@@ -20,6 +20,7 @@ DEFAULT_UNITS = UNIT_IMPERIAL
 STYLE_LED = "led"
 STYLE_PLAIN = "plain"
 STYLE_AMBER = "amber"
+STYLE_SPLITFLAP = "splitflap"
 DEFAULT_BOARD_STYLE = STYLE_LED
 DEFAULT_THEME = STYLE_LED
 
@@ -31,6 +32,7 @@ THEME_HA = {
     STYLE_LED: "flightwall",
     STYLE_PLAIN: "flightwall-plain",
     STYLE_AMBER: "flightwall-amber",
+    STYLE_SPLITFLAP: "flightwall-splitflap",
 }
 
 MIN_ALTITUDE_FT = 500

@@ -9,5 +9,5 @@
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/gmisner/ha-flightwall/issues",
   "requirements": ["Pillow"],
-  "version": "1.8.3"
+  "version": "1.9.0"
 }

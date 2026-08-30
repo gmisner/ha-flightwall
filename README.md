@@ -104,7 +104,8 @@ also copy `packages/flightwall.yaml` — you would get duplicate entities.
    **Settings → Devices & Services → Flight Wall → Configure**.
    Use **Image** on a 2019 Vizio or old Chromecast. Use **Live** on a
    tablet, Fully Kiosk, or a Chromecast that can load Home Assistant.
-   If live Cast fails, the board image is shown instead.
+   If live Cast fails, the board image is shown instead. Theme includes
+   LED, plain, amber, and split-flap.
 
 The integration creates `sensor.flightwall_flight`, the inbound binary
 sensor, the TV switch, and a **Flightwall** sidebar dashboard. Turning the

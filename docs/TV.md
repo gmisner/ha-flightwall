@@ -40,7 +40,9 @@ Services → Flight Wall → Configure**.
   this on a browser, tablet, or a Chromecast that can load Home
   Assistant. If the live session does not connect, Flight Wall falls
   back to the image so the set is not blank.
-- **Theme** — LED night, plain large type, or amber departures.
+- **Theme** — LED night, plain large type, amber departures, or
+  split-flap. Split-flap on the TV is a still board (this Vizio cannot
+  play the flap animation).
 
 Do not also install `packages/flightwall.yaml`.
 

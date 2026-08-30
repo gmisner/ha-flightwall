@@ -11,7 +11,7 @@ from urllib.request import urlopen
 from PIL import Image, ImageDraw, ImageFont
 
 from .board_copy import build_board
-from .const import STYLE_AMBER, STYLE_LED, UNIT_IMPERIAL
+from .const import STYLE_AMBER, STYLE_LED, STYLE_SPLITFLAP, UNIT_IMPERIAL
 
 FONT_PATH = Path(__file__).parent / "fonts" / "Roboto-Bold.ttf"
 CANVAS = (3840, 2160)
@@ -172,6 +172,9 @@ def render_board_png(
         last_seen=last_seen,
         next_flight=next_flight,
     )
+    if style == STYLE_SPLITFLAP:
+        return _png_bytes(_draw_splitflap(board))
+
     image = Image.new("RGB", CANVAS, colors["bg"])
     draw = ImageDraw.Draw(image)
     callsign_font = _font(40)
@@ -273,6 +276,83 @@ def _draw_flight(
         draw.rounded_rectangle((x, y, x + size, y + size), radius=_s(4), fill=color)
     if board.next_line:
         draw.text((_s(120), _s(980)), board.next_line, font=stats_font, fill=colors["muted"])
+
+
+FLAP_COLS = 16
+FLAP_BG = (8, 9, 11)
+FLAP_FACE = (26, 28, 33)
+FLAP_FACE_TOP = (34, 37, 43)
+FLAP_INK = (244, 243, 239)
+FLAP_LABEL = (139, 144, 153)
+FLAP_SEAM = (0, 0, 0)
+FLAP_LIT = (53, 255, 122)
+FLAP_LIT_DIM = (20, 40, 28)
+
+
+def _draw_splitflap(board: Any) -> Image.Image:
+    """Static mechanical departure board. No logo — a flap board cannot show one."""
+    image = Image.new("RGB", CANVAS, FLAP_BG)
+    draw = ImageDraw.Draw(image)
+    cell_h = _s(84)
+    cell_w = _s(56)
+    gap = _s(6)
+    label_w = _s(220)
+    rows = list(board.flap_rows)
+    line_h = cell_h + gap
+    board_h = line_h * (len(rows) + 1)
+    board_w = label_w + _s(24) + FLAP_COLS * cell_w + (FLAP_COLS - 1) * gap
+    left = (CANVAS[0] - board_w) // 2
+    top = (CANVAS[1] - board_h) // 2
+    label_font = _font(22)
+    char_font = _font(36)
+
+    def flap_cell(x: int, y: int, char: str, lit: bool = False) -> None:
+        face = FLAP_LIT if lit else FLAP_FACE
+        top_face = (70, 200, 110) if lit else FLAP_FACE_TOP
+        draw.rounded_rectangle((x, y, x + cell_w, y + cell_h), radius=_s(4), fill=face)
+        draw.rectangle((x, y, x + cell_w, y + cell_h // 2), fill=top_face)
+        mid = y + cell_h // 2
+        draw.line((x + 2, mid, x + cell_w - 2, mid), fill=FLAP_SEAM, width=2)
+        if char and char != " ":
+            bbox = draw.textbbox((0, 0), char, font=char_font)
+            tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+            draw.text(
+                (x + (cell_w - tw) // 2 - bbox[0], y + (cell_h - th) // 2 - bbox[1]),
+                char,
+                font=char_font,
+                fill=FLAP_INK,
+            )
+
+    y = top
+    for label, value in rows:
+        name = label.upper()
+        bbox = draw.textbbox((0, 0), name, font=label_font)
+        tw = bbox[2] - bbox[0]
+        draw.text(
+            (left + label_w - tw, y + (cell_h - _s(22)) // 2),
+            name,
+            font=label_font,
+            fill=FLAP_LABEL,
+        )
+        text = (value or "").upper()[:FLAP_COLS].ljust(FLAP_COLS)
+        x = left + label_w + _s(24)
+        for char in text:
+            flap_cell(x, y, char)
+            x += cell_w + gap
+        y += line_h
+
+    draw.text(
+        (left, y + (cell_h - _s(22)) // 2),
+        "PROGRESS",
+        font=label_font,
+        fill=FLAP_LABEL,
+    )
+    filled = max(0, min(FLAP_COLS, round(board.progress * FLAP_COLS / 32)))
+    x = left + label_w + _s(24)
+    for i in range(FLAP_COLS):
+        flap_cell(x, y, "", lit=i < filled)
+        x += cell_w + gap
+    return image
 
 
 def write_board_png(

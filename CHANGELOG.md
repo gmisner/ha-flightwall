@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.0
+
+- Configure **Theme → Split-flap**: mechanical departure-board look on the
+  TV image (labels plus 16-character flaps). No airline logo, same as a
+  real flap board. The tablet HTML page still animates; the TV shows the
+  settled board.
+
 ## 1.8.3
 
 - Always show a logo tile: airline mark when we have one, otherwise a

@@ -123,6 +123,7 @@ class BoardCopy:
     last_line: str
     last_ago: str
     logo_iata: str
+    flap_rows: list[tuple[str, str]]
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -167,6 +168,13 @@ def build_board(
             last_line=last_line,
             last_ago=last_ago,
             logo_iata="",
+            flap_rows=[
+                ("STATUS", "WAITING"),
+                ("TIME", clock_text(now, units)),
+                ("DATE", date),
+                ("LAST", last_line),
+                ("SEEN", last_ago),
+            ],
         )
 
     callsign = clean(flight.get("callsign")) or clean(
@@ -215,6 +223,13 @@ def build_board(
                 else f"NEXT  {next_callsign}  {route}"
             )
 
+    stats = format_stats(flight, units)
+    stat_parts = [part.strip() for part in stats.split("  ·  ") if part.strip()]
+    estimated = arriving
+    if " IN " in arriving:
+        estimated = arriving[arriving.rfind(" IN ") + 1 :].strip()
+    dest = dest_city or clean(flight.get("airport_destination_code_iata"))
+
     return BoardCopy(
         has_flight=True,
         title=title.upper(),
@@ -223,7 +238,7 @@ def build_board(
         details=details,
         departed=departed,
         arriving=arriving,
-        stats=format_stats(flight, units),
+        stats=stats,
         progress=progress_of(flight, now),
         next_line=next_line,
         date=date,
@@ -232,4 +247,13 @@ def build_board(
         last_line="",
         last_ago="",
         logo_iata=clean(flight.get("airline_iata")).upper(),
+        flap_rows=[
+            ("FLIGHT", callsign),
+            ("AIRCRAFT", model),
+            ("AIRLINE", airline),
+            ("TO", dest),
+            ("ESTIMATED", estimated),
+            ("ALTITUDE", stat_parts[0] if stat_parts else ""),
+            ("AIRSPEED", stat_parts[1] if len(stat_parts) > 1 else ""),
+        ],
     )

@@ -29,6 +29,7 @@ from .const import (
     STYLE_AMBER,
     STYLE_LED,
     STYLE_PLAIN,
+    STYLE_SPLITFLAP,
     UNIT_IMPERIAL,
     UNIT_METRIC,
 )
@@ -113,6 +114,10 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                             {
                                 "value": STYLE_AMBER,
                                 "label": "Amber departures",
+                            },
+                            {
+                                "value": STYLE_SPLITFLAP,
+                                "label": "Split-flap",
                             },
                         ],
                         "mode": "dropdown",
