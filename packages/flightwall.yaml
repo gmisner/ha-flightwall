@@ -1,7 +1,9 @@
-# Flight Wall - core entities
+# Flight Wall - legacy tablet popup entities
 #
-# Skip this file if you installed Flight Wall from HACS — the integration
-# already creates these entities.
+# Skip this file if you installed Flight Wall from HACS. The integration
+# already creates the sensors, copies splitflap.html to /local/flightwall/,
+# and drives the television. This package is only for the older
+# browser-mod popup.
 #
 # Drop this file in <config>/packages/ and make sure packages are enabled in
 # configuration.yaml:

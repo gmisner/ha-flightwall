@@ -16,9 +16,9 @@
 | **This TV is a flight board** | Same as `switch.flightwall_tv`. Off leaves the set alone. |
 | **Local ADS-B URL** | Optional `http://host:8080/data/aircraft.json` from readsb / tar1090. When set, it is polled every 10 seconds and used instead of Flightradar24 |
 
-TV walkthrough: [TV.md](TV.md). The rest of this page is the optional tablet
-popup package (`packages/flightwall.yaml` and `automations/flightwall_popup.yaml`).
-Do not install that package if you already use the HACS integration.
+TV walkthrough: [TV.md](TV.md). A tablet should open the Flightwall
+dashboard or `/local/flightwall/splitflap.html` (copied by the
+integration). The YAML package further down is legacy only.
 
 ## Behaviour
 

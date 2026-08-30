@@ -135,6 +135,13 @@ Chromecast. Use Display → Image.
 2. Control Center → Screen Mirroring → the television.
 3. Stop mirroring from the same device when you are done.
 
+## Tablet
+
+Install Flight Wall from HACS, then open `/flight-wall/board` in a
+browser or Fully Kiosk. The integration copies
+`/local/flightwall/splitflap.html` for the animated flap board. No
+YAML package.
+
 ## Optional: HDMI stick
 
 A Chromecast with Google TV or an Onn box on HDMI *is* a browser. The

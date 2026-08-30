@@ -16,6 +16,7 @@ from .dashboard import (
     flight_entity_for,
 )
 from .runtime import FlightwallRuntime
+from .www_files import async_install_www
 from .tv import RECAST_REASON
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,6 +51,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _async_setup_dashboard(hass: HomeAssistant, runtime: FlightwallRuntime) -> None:
+    await async_install_www(hass)
     await async_write_theme(hass)
     await async_ensure_dashboard(
         hass,
