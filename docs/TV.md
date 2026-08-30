@@ -25,8 +25,12 @@ automation paste. Add the integration, pick the two TV entities, leave
 `/local/flightwall-board.png` and plays that image on the Chromecast
 when the TV comes on. It refreshes about once a minute while Cast is
 showing the board, and immediately when the selected aircraft changes.
-If someone switches the set to another app, Flight Wall does not take
-over again until the TV is turned off and on, or you re-arm the switch.
+If someone switches the set to another app — Netflix, HDMI, the TV's
+home screen — Flight Wall does not take over again until the TV is
+turned off and on, you re-arm the switch, or you call the
+`flightwall.recast` service. Keepalive only refreshes while Cast is
+already showing the board, or while the set has not reported a source
+yet. That is brand-agnostic: there is no SmartCast-only special case.
 
 **Display**, **Theme**, and **Units** are under **Settings → Devices &
 Services → Flight Wall → Configure**.
@@ -150,8 +154,14 @@ set. The television itself must be the power helper.
 
 **Someone wants to watch something else.** They can switch source with
 the remote. Flight Wall will not steal the set back. Turning the TV off
-and on, or flipping the Flight Wall switch off and on, makes it a
-flight board again.
+and on, flipping the Flight Wall switch off and on, or calling
+**Developer Tools → Actions → `flightwall.recast`**, makes it a flight
+board again.
+
+**Need to see why Cast failed.** Settings → Devices & Services →
+Flight Wall → ⋮ → Download diagnostics. That dump includes the power
+entity, Cast source, player app, and the last cast error. It does not
+include tokens.
 
 **Board looks soft on a large set.** Use **Configure → Theme → Plain
 large type**. The image is 4K either way.

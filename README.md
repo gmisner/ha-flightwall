@@ -98,7 +98,9 @@ sensor at that instead.
    will want Netflix or another app in that room. While the switch is
    on, turning the TV on with the remote starts Cast. If they then
    switch to another source, Flight Wall stays out of the way until the
-   set is turned off and on, or you re-arm the switch.
+   set is turned off and on, you re-arm the switch, or you call
+   `flightwall.recast`. Keepalive only refreshes while Cast is showing
+   the board.
 6. **Display**, **Theme**, and **Units** are under
    **Settings → Devices & Services → Flight Wall → Configure**.
 

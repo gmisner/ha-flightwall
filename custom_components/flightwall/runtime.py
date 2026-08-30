@@ -42,13 +42,12 @@ from .const import (
     THEME_HA,
     TV_CAST_SOURCE,
     TV_CAST_SOURCES,
-    TV_IDLE_SOURCES,
     TV_KEEPALIVE,
     TV_POWER_ON_DELAY,
-    TV_TAKEOVER_REASONS,
     VIEW_PATH,
 )
 from .flight import callsign_of, rank_flights
+from .tv import TAKEOVER_REASONS, should_refresh_board, should_select_cast
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,6 +68,8 @@ class FlightwallRuntime:
         self.inbound = False
         self.tv_enabled = False
         self._live_failed = False
+        self.last_cast_reason: str | None = None
+        self.last_cast_error: str | None = None
         self._listeners: list[Callable[[], None]] = []
         self._unsubs: list[CALLBACK_TYPE] = []
         self._inbound_unsub: CALLBACK_TYPE | None = None
@@ -264,19 +265,11 @@ class FlightwallRuntime:
             return True
         return self._player_showing_board()
 
-    def _tv_is_other_app(self) -> bool:
-        """True when someone picked Netflix, HDMI, or another real app."""
-        source = self._tv_source()
-        if not source or source in TV_CAST_SOURCES or source in TV_IDLE_SOURCES:
-            return False
-        return True
-
     def _should_refresh_board(self) -> bool:
-        if self._tv_showing_board():
-            return True
-        if self._tv_is_other_app():
-            return False
-        return self._tv_source() in TV_IDLE_SOURCES
+        return should_refresh_board(
+            source=self._tv_source(),
+            showing_board=self._tv_showing_board(),
+        )
 
     async def async_set_tv_enabled(self, enabled: bool) -> None:
         self.tv_enabled = enabled
@@ -304,9 +297,7 @@ class FlightwallRuntime:
         )
 
     async def _select_cast_source(self, reason: str) -> None:
-        if self.tv_power and (
-            reason in TV_TAKEOVER_REASONS or self._tv_source() in TV_IDLE_SOURCES
-        ):
+        if self.tv_power and should_select_cast(reason):
             await self.hass.services.async_call(
                 "media_player",
                 "select_source",
@@ -341,13 +332,17 @@ class FlightwallRuntime:
 
     async def async_cast(self, reason: str, delay: bool = False) -> None:
         """Show the board on the Chromecast."""
-        if not self.tv_enabled or not self.tv_player:
+        if not self.tv_player:
+            return
+        if reason != "recast" and not self.tv_enabled:
             return
         if reason != "armed" and not self._tv_is_on():
             return
-        if reason not in TV_TAKEOVER_REASONS and not self._should_refresh_board():
+        if reason not in TAKEOVER_REASONS and not self._should_refresh_board():
             _LOGGER.debug("Skip Flight Wall cast (%s); TV is on another source", reason)
             return
+        self.last_cast_reason = reason
+        self.last_cast_error = None
 
         if delay:
             if self._cast_delay_unsub:
@@ -370,7 +365,7 @@ class FlightwallRuntime:
                 if reason in {"keep", "flight"} and self._player_showing_live():
                     return
                 await self._cast_live_view()
-                if reason in TV_TAKEOVER_REASONS:
+                if reason in TAKEOVER_REASONS:
                     await asyncio.sleep(8)
                     if not self._player_showing_live():
                         _LOGGER.warning(
@@ -383,6 +378,8 @@ class FlightwallRuntime:
                 return
             await self._play_board_image()
         except HomeAssistantError as err:
+            self.last_cast_error = str(err)
             _LOGGER.warning("Cast to %s failed (%s): %s", self.tv_player, reason, err)
         except OSError as err:
+            self.last_cast_error = str(err)
             _LOGGER.warning("Could not write Flight Wall image (%s): %s", reason, err)
