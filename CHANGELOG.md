@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.10.0
+
+- Add pytest coverage for flight ranking and board text, plus a GitHub Actions check
+
 ## 1.9.2
 
 - Public install guide and docs: television vs tablet paths, current
