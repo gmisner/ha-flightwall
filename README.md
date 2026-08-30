@@ -44,6 +44,12 @@ The older tablet popup still switches with `input_select.flightwall_style`
 
 ![Split-flap style](docs/images/split-flap.jpg)
 
+TV image themes (HACS, Display → Image):
+
+![LED night](docs/images/tv-led.png)
+![Amber](docs/images/tv-amber.png)
+![Split-flap TV](docs/images/tv-splitflap.png)
+
 ## Requirements
 
 ### Television (HACS)
@@ -134,52 +140,23 @@ airline marks, and quiet hours are on the same Configure page.
 
 Full TV notes: [docs/TV.md](docs/TV.md).
 
-### Tablet popup (manual package)
+### Tablet (same HACS install)
 
-Use this only if you want the browser-mod LED / animated split-flap
-popup. Skip it if you installed from HACS and only want the TV.
+Do not install the YAML package. Open the **Flightwall** sidebar
+dashboard (or `http://YOUR_HA:8123/flight-wall/board`) in a browser or
+[Fully Kiosk](https://www.fully-kiosk.com/) on the tablet. Use Display
+→ Live if you want that dashboard on a Chromecast that can load Home
+Assistant.
 
-#### 1. Flightradar24
+The integration copies the animated split-flap page to
+`/local/flightwall/splitflap.html` on setup. Open that URL for the
+mechanical flap animation; the TV PNG is still.
 
-Install via HACS, set coordinates, start with a **30 km** radius, and
-rename the flights-in-area entity to
-`sensor.flightradar24_flights_in_area`.
+### Legacy YAML package
 
-#### 2. Package
-
-```yaml
-homeassistant:
-  packages: !include_dir_named packages
-```
-
-Copy `packages/flightwall.yaml` into `<config>/packages/`, edit the
-`rest_command` with the tablet IP and Fully password (or delete that
-block), then restart.
-
-#### 3. Split-flap page
-
-Copy `www/splitflap.html` to
-`<config>/www/flightwall/splitflap.html` and restart. Preview:
-
-```
-http://your-ha:8123/local/flightwall/splitflap.html
-```
-
-#### 4. Check data
-
-**Developer Tools → States → `sensor.flightwall_flight`**. If it is
-`none`, stop and see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
-
-#### 5. Popup automation
-
-**Settings → Automations → Create automation → Edit in YAML**, paste
-`automations/flightwall_popup.yaml`. No leading `- `, no `automation:`
-key. The popup shows each new aircraft once and closes after the
-timeout, on tap, or when the zone is empty.
-
-#### 6. Optional TV without HACS
-
-See [docs/TV.md](docs/TV.md). Prefer the HACS integration instead.
+`packages/flightwall.yaml` and `automations/flightwall_popup.yaml` are
+the older browser-mod popup. Use them only if you already have that
+stack and do not want the HACS integration. Do not run both.
 
 ## Configuration
 

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Flight Wall split-flap</title>
+<!--
+  Flight Wall - split-flap board
+
+  Serve from <config>/www/flightwall/splitflap.html, i.e.
+  http://your-ha:8123/local/flightwall/splitflap.html
+
+  Values are passed as URL parameters, so the page is a pure renderer with no
+  Home Assistant knowledge of its own:
+
+    ?r1=LH1117&r2=AIRBUS A321-231&r3=LUFTHANSA&r4=DUSSELDORF
+    &r5=19:26 IN 34M&r6=11.300 FT&r7=346 KT&p=10
+
+    r1..r7  row values, in label order
+    p       progress, 0..cols, drives the bottom strip
+    l1..l8  optional label overrides, defaults are printed below
+    cols    optional, board width in characters, default 16
+    ms      optional, milliseconds per flap step, default 76
+
+  Row labels are printed on the frame rather than set in flaps, which is how a
+  real departure board does it.
+
+  Open the file directly with no parameters to see a demo board.
+-->
+<style>
+  :root {
+    --gap: 0.34vh;
+    /* Eight rows tall, and wide enough for the label column plus every cell. */
+    --cell-h: min(9.6vh, calc(94vw / 13.4));
+    --cell-w: calc(var(--cell-h) / 1.5);
+    --label-w: calc(var(--cell-h) * 2.7);
+    --board: #08090b;
+    --flap: #1a1c21;
+    --flap-lit: #23262c;
+    --ink: #f4f3ef;
+    --label: #8b9099;
+    --seam: rgba(0, 0, 0, .65);
+    --edge: rgba(255, 255, 255, .05);
+    --lit: #35ff7a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    background: var(--board);
+    overflow: hidden;
+    font-family: 'Roboto Mono', 'DejaVu Sans Mono', ui-monospace, monospace;
+  }
+
+  #board {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gap);
+  }
+
+  .line { display: flex; align-items: center; gap: calc(var(--cell-h) * 0.22); }
+
+  .label {
+    width: var(--label-w);
+    flex: 0 0 var(--label-w);
+    text-align: right;
+    font-size: calc(var(--cell-h) * 0.245);
+    letter-spacing: .16em;
+    line-height: 1.1;
+    text-transform: uppercase;
+    color: var(--label);
+    user-select: none;
+  }
+
+  .row { display: flex; gap: calc(var(--gap) * 0.8); }
+
+  .cell {
+    position: relative;
+    width: var(--cell-w);
+    height: var(--cell-h);
+    perspective: 260px;
+    border-radius: calc(var(--cell-h) * 0.06);
+    overflow: hidden;
+    background: var(--flap);
+    box-shadow: inset 0 0 0 1px var(--edge);
+  }
+
+  /* Each half is a window onto a full-height glyph. The top window shows the
+     upper part, the bottom window the lower part of the same character, which
+     is what produces the seam across the middle of every flap. */
+  .half {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    overflow: hidden;
+    background: var(--flap);
+    backface-visibility: hidden;
+  }
+
+  .half > span {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: var(--cell-h);
+    line-height: var(--cell-h);
+    text-align: center;
+    font-size: calc(var(--cell-h) * 0.62);
+    font-weight: 500;
+    color: var(--ink);
+    user-select: none;
+  }
+
+  .top    { top: 0; border-bottom: 1px solid var(--seam); }
+  .bottom { bottom: 0; }
+  .top > span    { top: 0; }
+  .bottom > span { top: -100%; }
+
+  /* The two animating leaves sit above the static halves during a flip. */
+  .leaf-top {
+    top: 0;
+    transform-origin: bottom center;
+    z-index: 3;
+    border-bottom: 1px solid var(--seam);
+    background: var(--flap-lit);
+  }
+  .leaf-bottom {
+    bottom: 0;
+    transform-origin: top center;
+    z-index: 3;
+    transform: rotateX(90deg);
+    background: var(--flap-lit);
+  }
+  .leaf-top > span    { top: 0; }
+  .leaf-bottom > span { top: -100%; }
+
+  .flipping .leaf-top    { animation: leaf-fall var(--dur) cubic-bezier(.36,.1,.6,1) forwards; }
+  .flipping .leaf-bottom { animation: leaf-rise var(--dur) cubic-bezier(.4,.2,.3,1) forwards; }
+
+  @keyframes leaf-fall {
+    0%   { transform: rotateX(0deg);   filter: brightness(1); }
+    100% { transform: rotateX(-90deg); filter: brightness(.55); }
+  }
+  @keyframes leaf-rise {
+    0%   { transform: rotateX(90deg);  filter: brightness(.55); }
+    100% { transform: rotateX(0deg);   filter: brightness(1); }
+  }
+
+  .cell.bar .half > span { color: var(--lit); }
+  .line.bar .label { color: var(--lit); opacity: .7; }
+  .cell.idle .leaf-top, .cell.idle .leaf-bottom { display: none; }
+</style>
+</head>
+<body>
+<div id="board"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var q = new URLSearchParams(location.search);
+  var COLS = Math.max(8, Math.min(48, parseInt(q.get("cols"), 10) || 16));
+  var STEP = Math.max(12, Math.min(300, parseInt(q.get("ms"), 10) || 76));
+
+  // Flap order. A real board cycles through its physical sequence, so reaching
+  // a late character takes visibly longer than an early one. That uneven timing
+  // is most of what makes it read as mechanical rather than as a fade.
+  var MAIN = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,-:/>()+";
+  var BAR  = " \u00B7\u2588";
+
+  var LABELS = ["FLIGHT", "AIRCRAFT", "AIRLINE", "TO",
+                "ESTIMATED", "ALTITUDE", "AIRSPEED", "PROGRESS"];
+
+  var demo = {
+    r1: "LH1117",
+    r2: "AIRBUS A321-231",
+    r3: "LUFTHANSA",
+    r4: "DUSSELDORF",
+    r5: "19:26 IN 34M",
+    r6: "11.300 FT",
+    r7: "346 KT",
+    p: "10"
+  };
+
+  var hasParams = q.has("r1") || q.has("r2") || q.has("r3");
+
+  function param(k) {
+    var v = q.get(k);
+    if (v === null || v === undefined) v = hasParams ? "" : (demo[k] || "");
+    return v;
+  }
+
+  function label(i) {
+    var v = q.get("l" + (i + 1));
+    return (v === null || v === "") ? LABELS[i] : v;
+  }
+
+  function normalise(text, set) {
+    var out = [];
+    var up = String(text).toUpperCase();
+    for (var i = 0; i < COLS; i++) {
+      var ch = i < up.length ? up.charAt(i) : " ";
+      if (set.indexOf(ch) === -1) ch = " ";
+      out.push(ch);
+    }
+    return out;
+  }
+
+  function progressRow() {
+    var n = parseInt(param("p"), 10);
+    if (isNaN(n) || n < 0) n = 0;
+    if (n > COLS) n = COLS;
+    var s = "";
+    for (var i = 0; i < COLS; i++) s += (i < n ? "\u2588" : "\u00B7");
+    return s;
+  }
+
+  var board = document.getElementById("board");
+  var cells = [];
+
+  function buildCell(isBar) {
+    var cell = document.createElement("div");
+    cell.className = "cell idle" + (isBar ? " bar" : "");
+    cell.style.setProperty("--dur", STEP + "ms");
+    ["top", "bottom", "leaf-top", "leaf-bottom"].forEach(function (cls) {
+      var half = document.createElement("div");
+      half.className = "half " + cls;
+      var span = document.createElement("span");
+      span.textContent = " ";
+      half.appendChild(span);
+      cell.appendChild(half);
+    });
+    var halves = cell.querySelectorAll(".half > span");
+    return {
+      el: cell,
+      top: halves[0],
+      bottom: halves[1],
+      leafTop: halves[2],
+      leafBottom: halves[3],
+      set: isBar ? BAR : MAIN,
+      index: 0,
+      target: 0
+    };
+  }
+
+  function buildLine(idx, text, isBar) {
+    var line = document.createElement("div");
+    line.className = "line" + (isBar ? " bar" : "");
+
+    var lab = document.createElement("div");
+    lab.className = "label";
+    lab.textContent = label(idx);
+    line.appendChild(lab);
+
+    var row = document.createElement("div");
+    row.className = "row";
+    var chars = normalise(text, isBar ? BAR : MAIN);
+    for (var i = 0; i < COLS; i++) {
+      var c = buildCell(isBar);
+      c.target = c.set.indexOf(chars[i]);
+      if (c.target < 0) c.target = 0;
+      c.col = i;
+      row.appendChild(c.el);
+      cells.push(c);
+    }
+    line.appendChild(row);
+    board.appendChild(line);
+  }
+
+  ["r1", "r2", "r3", "r4", "r5", "r6", "r7"].forEach(function (k, i) {
+    buildLine(i, param(k), false);
+  });
+  buildLine(7, progressRow(), true);
+
+  // One flap step: the outgoing top leaf falls away while the incoming bottom
+  // leaf swings up, and the static halves are swapped underneath at the
+  // halfway point so the seam never shows the wrong character.
+  function step(c) {
+    if (c.index === c.target) return;
+    var next = (c.index + 1) % c.set.length;
+    var cur = c.set.charAt(c.index);
+    var nxt = c.set.charAt(next);
+
+    c.leafTop.textContent = cur;
+    c.leafBottom.textContent = nxt;
+    c.bottom.textContent = cur;
+    c.top.textContent = nxt;
+
+    c.el.classList.remove("idle");
+    c.el.classList.remove("flipping");
+    void c.el.offsetWidth;
+    c.el.classList.add("flipping");
+
+    setTimeout(function () {
+      c.bottom.textContent = nxt;
+      c.index = next;
+      c.el.classList.remove("flipping");
+      c.el.classList.add("idle");
+      step(c);
+    }, STEP);
+  }
+
+  // Stagger by column so the update sweeps left to right, with a little jitter
+  // so the columns do not move in lockstep.
+  function start() {
+    cells.forEach(function (c) {
+      setTimeout(function () { step(c); }, c.col * 52 + Math.random() * 90);
+    });
+  }
+
+  if (document.readyState === "complete") start();
+  else window.addEventListener("load", start);
+})();
+</script>
+</body>
+</html>
