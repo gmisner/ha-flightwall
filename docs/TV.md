@@ -12,7 +12,8 @@ load a live Home Assistant dashboard. Flight Wall switches the set to
 Cast and sends a 4K board image: airline (or a generic aircraft mark),
 callsign, route, cities, type, registration, heading, times, altitude,
 speed, progress, and the next aircraft when a second one is in range.
-Empty sky shows a clock and the last flight overhead.
+Empty sky shows a clock. After an aircraft has passed, the waiting
+board keeps the last overhead with airline, cities, type, and times.
 
 AirPlay is manual screen mirroring from an iPhone, iPad, or Mac. Home
 Assistant cannot start AirPlay.
@@ -23,8 +24,9 @@ If you installed Flight Wall from HACS, skip the file copies and the TV
 automation paste. Add the integration, pick the two TV entities, leave
 `switch.flightwall_tv` on. The integration writes
 `/local/flightwall-board.png` and plays that image on the Chromecast
-when the TV comes on. It refreshes about once a minute while Cast is
-showing the board, and immediately when the selected aircraft changes.
+when the TV comes on. It refreshes on the **Image refresh** interval
+under Configure (default 20 seconds) while Cast is showing the board,
+and immediately when the selected aircraft changes.
 If someone switches the set to another app — Netflix, HDMI, the TV's
 home screen — Flight Wall does not take over again until the TV is
 turned off and on, you re-arm the switch, or you call the
@@ -124,7 +126,8 @@ data:
 
 Then: switch on, TV off, TV on with the remote. After about ten seconds
 the board should appear. While Cast is showing it, the image refreshes
-about once a minute. Nothing in this project turns the TV off.
+on the **Image refresh** interval (default 20 seconds). Nothing in this
+project turns the TV off.
 
 Do **not** rely on `cast.show_lovelace_view` on an older built-in
 Chromecast. Use Display → Image.

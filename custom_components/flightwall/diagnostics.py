@@ -26,6 +26,7 @@ async def async_get_config_entry_diagnostics(
         "units": runtime.units,
         "theme": runtime.board_style,
         "display_mode": runtime.display_mode,
+        "refresh_seconds": runtime.refresh_seconds,
         "tv_enabled": runtime.tv_enabled,
         "tv_power": runtime.tv_power,
         "tv_player": runtime.tv_player,

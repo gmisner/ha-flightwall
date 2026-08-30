@@ -18,8 +18,9 @@ by physical LED flight boards, in particular
   angle**, not ground distance. A jet at 38,000 ft ten kilometres away
   is not the plane in the window; the one on approach at 3,000 ft is.
 - Shows city names, registration, heading, and a next-up flight when a
-  second aircraft is in range. Empty sky shows a clock and the last
-  aircraft overhead.
+  second aircraft is in range. Empty sky shows a clock; after a pass,
+  the waiting board keeps the last aircraft with airline, cities, and
+  type.
 - On a TV, writes a 4K board image and Casts it. On a tablet, open the
   Flightwall dashboard (or the animated split-flap page) in a browser
   or Fully Kiosk.
@@ -159,7 +160,7 @@ HACS options live in the integration Configure dialog. See
 
 | What | Where | Default |
 |---|---|---|
-| Display, theme, units, clock, logos, quiet hours, ADS-B | Integration → Configure | Image, LED night, imperial |
+| Display, theme, units, clock, logos, image refresh, quiet hours, ADS-B | Integration → Configure | Image, LED night, imperial, 20 s |
 | TV is a flight board | `switch.flightwall_tv` | on after setup |
 | How long after the last aircraft | inbound binary sensor off-delay | 2 minutes |
 

@@ -19,6 +19,7 @@ CONF_QUIET_ENABLED = "quiet_enabled"
 CONF_QUIET_START = "quiet_start"
 CONF_QUIET_END = "quiet_end"
 CONF_ADSB_URL = "adsb_url"
+CONF_REFRESH_SECONDS = "refresh_seconds"
 
 ADSB_POLL = timedelta(seconds=10)
 
@@ -43,6 +44,9 @@ DEFAULT_SHOW_LOGOS = True
 DEFAULT_QUIET_ENABLED = False
 DEFAULT_QUIET_START = "22:00:00"
 DEFAULT_QUIET_END = "07:00:00"
+DEFAULT_REFRESH_SECONDS = 20
+MIN_REFRESH_SECONDS = 5
+MAX_REFRESH_SECONDS = 300
 
 DISPLAY_IMAGE = "image"
 DISPLAY_LIVE = "live"
@@ -59,7 +63,21 @@ THEME_HA = {
 MIN_ALTITUDE_FT = 500
 INBOUND_DELAY_OFF = timedelta(minutes=2)
 TV_POWER_ON_DELAY = timedelta(seconds=10)
-TV_KEEPALIVE = timedelta(minutes=1)
+TV_KEEPALIVE = timedelta(seconds=DEFAULT_REFRESH_SECONDS)
+
+
+def keepalive_interval(seconds: object = None) -> timedelta:
+    """Clamp the image refresh to a usable Cast interval."""
+    if isinstance(seconds, bool) or not isinstance(seconds, (int, float, str)):
+        value = DEFAULT_REFRESH_SECONDS
+    else:
+        try:
+            value = int(round(float(seconds)))
+        except (TypeError, ValueError):
+            value = DEFAULT_REFRESH_SECONDS
+    return timedelta(
+        seconds=max(MIN_REFRESH_SECONDS, min(MAX_REFRESH_SECONDS, value))
+    )
 TV_CAST_SOURCE = "Cast"
 TV_CAST_SOURCES = frozenset({"cast", "chromecast", "google cast"})
 TV_TAKEOVER_REASONS = frozenset({"tv_on", "armed"})

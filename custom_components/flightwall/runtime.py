@@ -34,6 +34,7 @@ from .const import (
     CONF_QUIET_ENABLED,
     CONF_QUIET_END,
     CONF_QUIET_START,
+    CONF_REFRESH_SECONDS,
     CONF_SHOW_LOGOS,
     CONF_THEME,
     CONF_TIME_FORMAT,
@@ -55,9 +56,9 @@ from .const import (
     THEME_HA,
     TV_CAST_SOURCE,
     TV_CAST_SOURCES,
-    TV_KEEPALIVE,
     TV_POWER_ON_DELAY,
     VIEW_PATH,
+    keepalive_interval,
 )
 from .dashboard import dashboard_path_for
 from .flight import callsign_of, rank_flights
@@ -139,6 +140,10 @@ class FlightwallRuntime:
         return bool(self.entry.data.get(CONF_SHOW_LOGOS, DEFAULT_SHOW_LOGOS))
 
     @property
+    def refresh_seconds(self) -> int:
+        return int(keepalive_interval(self.entry.data.get(CONF_REFRESH_SECONDS)).total_seconds())
+
+    @property
     def quiet_enabled(self) -> bool:
         return bool(self.entry.data.get(CONF_QUIET_ENABLED, DEFAULT_QUIET_ENABLED))
 
@@ -204,7 +209,11 @@ class FlightwallRuntime:
                 )
             )
         self._unsubs.append(
-            async_track_time_interval(self.hass, self._keepalive, TV_KEEPALIVE)
+            async_track_time_interval(
+                self.hass,
+                self._keepalive,
+                keepalive_interval(self.entry.data.get(CONF_REFRESH_SECONDS)),
+            )
         )
 
     async def async_unload(self) -> None:

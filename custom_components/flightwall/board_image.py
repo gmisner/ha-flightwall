@@ -205,7 +205,18 @@ def render_board_png(
     stats_font = _font(42)
 
     if not board.has_flight:
-        _draw_empty(draw, board, colors, clock_font, body_font, stats_font)
+        _draw_empty(
+            image,
+            draw,
+            board,
+            colors,
+            style,
+            clock_font,
+            callsign_font,
+            route_font,
+            body_font,
+            stats_font,
+        )
     else:
         _draw_flight(
             image,
@@ -225,22 +236,45 @@ def render_board_png(
 
 
 def _draw_empty(
+    image: Image.Image,
     draw: ImageDraw.ImageDraw,
     board: Any,
     colors: dict[str, Any],
+    style: str,
     clock_font: ImageFont.ImageFont,
+    callsign_font: ImageFont.ImageFont,
+    route_font: ImageFont.ImageFont,
     body_font: ImageFont.ImageFont,
     stats_font: ImageFont.ImageFont,
 ) -> None:
+    if board.title or board.route:
+        waiting = "WAITING FOR TRAFFIC"
+        stamp = f"{board.date}   {board.clock}"
+        draw.text((_s(120), _s(18)), waiting, font=stats_font, fill=colors["muted"])
+        bbox = draw.textbbox((0, 0), stamp, font=stats_font)
+        draw.text(
+            (CANVAS[0] - _s(120) - (bbox[2] - bbox[0]), _s(18)),
+            stamp,
+            font=stats_font,
+            fill=colors["muted"],
+        )
+        _draw_flight(
+            image,
+            draw,
+            board,
+            colors,
+            style,
+            callsign_font,
+            route_font,
+            body_font,
+            stats_font,
+            y0=_s(40),
+        )
+        return
     left = _s(120)
     draw.text((left, _s(80)), board.date, font=stats_font, fill=colors["muted"])
     draw.text((left, _s(180)), board.clock, font=clock_font, fill=colors["ink"])
     draw.text((left, _s(460)), "WAITING FOR TRAFFIC", font=body_font, fill=colors["muted"])
-    if board.last_line:
-        draw.text((left, _s(600)), board.last_label, font=stats_font, fill=colors["muted"])
-        draw.text((left, _s(680)), board.last_line, font=body_font, fill=colors["ink"])
-        if board.last_ago:
-            draw.text((left, _s(760)), board.last_ago, font=body_font, fill=colors["ink"])
 
 
 def _draw_flight(
@@ -253,12 +287,13 @@ def _draw_flight(
     route_font: ImageFont.ImageFont,
     body_font: ImageFont.ImageFont,
     stats_font: ImageFont.ImageFont,
+    y0: int = 0,
 ) -> None:
     left = _s(120)
     if getattr(board, "show_logos", True):
         tile = colors["logo_tile"]
         size = _s(260)
-        origin = (_s(80), _s(80))
+        origin = (_s(80), _s(80) + y0)
         logo = _airline_logo(board.logo_iata, style)
         if logo is None:
             logo = _generic_mark(int(size * 0.72), colors["mark"])
@@ -273,14 +308,14 @@ def _draw_flight(
         box.paste(logo, (lx, ly), logo)
         image.paste(box.convert("RGB"), origin)
         left = origin[0] + size + _s(80)
-    y = _s(80)
+    y = _s(80) + y0
     draw.text((left, y), board.title, font=callsign_font, fill=colors["muted"])
-    y = _s(150)
+    y = _s(150) + y0
     draw.text((left, y), board.route, font=route_font, fill=colors["ink"])
-    y = _s(360)
+    y = _s(360) + y0
     if board.cities:
         draw.text((left, y), board.cities, font=stats_font, fill=colors["muted"])
-        y = _s(420)
+        y = _s(420) + y0
     if board.details:
         draw.text((left, y), board.details, font=body_font, fill=colors["muted"])
         y += _s(80)
@@ -298,7 +333,12 @@ def _draw_flight(
         color = colors["bar"] if i < board.progress else colors["bar_dim"]
         draw.rounded_rectangle((x, y, x + size, y + size), radius=_s(4), fill=color)
     if board.next_line:
-        draw.text((_s(120), _s(980)), board.next_line, font=stats_font, fill=colors["muted"])
+        draw.text(
+            (_s(120), _s(980) + y0),
+            board.next_line,
+            font=stats_font,
+            fill=colors["muted"],
+        )
 
 
 FLAP_COLS = 16
@@ -324,7 +364,8 @@ def _draw_splitflap(board: Any) -> Image.Image:
     image = Image.new("RGB", CANVAS, FLAP_BG)
     draw = ImageDraw.Draw(image)
     rows = list(board.flap_rows)
-    n_rows = len(rows) + 1
+    show_progress = bool(getattr(board, "has_flight", False) or board.route)
+    n_rows = len(rows) + (1 if show_progress else 0)
     margin_x = int(CANVAS[0] * 0.045)
     margin_y = int(CANVAS[1] * 0.055)
     avail_w = CANVAS[0] - 2 * margin_x
@@ -384,12 +425,13 @@ def _draw_splitflap(board: Any) -> Image.Image:
             x += cell_w + gap
         y += cell_h + gap
 
-    draw_label("PROGRESS", y)
-    filled = max(0, min(FLAP_COLS, round(board.progress * FLAP_COLS / 32)))
-    x = left + label_w + gutter
-    for i in range(FLAP_COLS):
-        flap_cell(x, y, "", lit=i < filled)
-        x += cell_w + gap
+    if show_progress:
+        draw_label("PROGRESS", y)
+        filled = max(0, min(FLAP_COLS, round(board.progress * FLAP_COLS / 32)))
+        x = left + label_w + gutter
+        for i in range(FLAP_COLS):
+            flap_cell(x, y, "", lit=i < filled)
+            x += cell_w + gap
     return image
 
 

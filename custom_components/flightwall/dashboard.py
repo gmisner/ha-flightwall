@@ -36,17 +36,30 @@ BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 
 {{ b.next_line }}
 {% else %}
-## {{ b.date }}
-
-# {{ b.clock }}
-
 ### WAITING FOR TRAFFIC
 
-{{ b.last_label }}
+{{ b.date }} {{ b.clock }}
+{% if b.title %}
+{% if b.logo_iata %}![](https://images.kiwi.com/airlines/128/{{ b.logo_iata }}.png){% endif %}
 
-{{ b.last_line }}
+## {{ b.title }}
 
-{{ b.last_ago }}
+# {{ b.route }}
+
+### {{ b.cities }}
+
+{{ b.details }}
+
+{{ b.departed }}
+
+{{ b.arriving }}
+
+{{ b.stats }}
+
+{{ '█' * (b.progress | int(0)) }}{{ '░' * (32 - (b.progress | int(0))) }}
+
+{{ b.next_line }}
+{% endif %}
 {% endif %}
 """
 

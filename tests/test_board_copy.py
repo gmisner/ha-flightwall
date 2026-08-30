@@ -77,3 +77,25 @@ def test_empty_sky_shows_last_flight() -> None:
     assert "AAL123" in board.last_line
     assert board.last_ago == "JUST NOW"
     assert board.clock
+    assert board.route == "LAX-JFK"
+    assert "LOS ANGELES" in board.cities
+    assert "NEW YORK" in board.cities
+    assert "AMERICAN" in board.title
+    assert "BOEING" in board.details
+    assert board.logo_iata == "AA"
+    assert board.show_logos is True
+    assert "LAST OVERHEAD" in board.next_line
+    assert 0 < board.progress < 32
+    labels = {label: value for label, value in board.flap_rows}
+    assert labels["STATUS"] == "WAITING"
+    assert labels["AIRLINE"] == "American"
+    assert labels["FROM"] == "LOS ANGELES"
+    assert labels["TO"] == "NEW YORK"
+    hidden = build_board(None, now=now, last_flight=FLIGHT, show_logos=False)
+    assert hidden.logo_iata == ""
+    assert hidden.show_logos is False
+    empty = build_board(None, now=now)
+    assert empty.title == ""
+    assert empty.route == ""
+    assert empty.show_logos is False
+    assert [label for label, _ in empty.flap_rows] == ["STATUS", "TIME", "DATE"]

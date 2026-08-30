@@ -12,6 +12,7 @@
 | **Minimum altitude** | Ignore aircraft at or below this (default 500 ft) |
 | **Clock** | Follow units, or force 12-hour / 24-hour |
 | **Show airline marks** | Off hides the logo column and does not fetch Kiwi CDN images |
+| **Image refresh** | How often to redraw and recast the still image while Cast is showing the board (5–300 seconds, default 20). Aircraft changes still recast immediately |
 | **Quiet hours** | Skip TV takeover and keepalive between the start and end times. `flightwall.recast` still works |
 | **This TV is a flight board** | Same as `switch.flightwall_tv`. Off leaves the set alone. |
 | **Local ADS-B URL** | Optional `http://host:8080/data/aircraft.json` from readsb / tar1090. When set, it is polled every 10 seconds and used instead of Flightradar24 |
