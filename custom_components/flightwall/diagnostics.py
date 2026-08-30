@@ -22,6 +22,7 @@ async def async_get_config_entry_diagnostics(
     player = hass.states.get(runtime.tv_player) if runtime.tv_player else None
     return {
         "flights_entity": runtime.flights_entity,
+        "adsb_url": bool(runtime.adsb_url),
         "units": runtime.units,
         "theme": runtime.board_style,
         "display_mode": runtime.display_mode,

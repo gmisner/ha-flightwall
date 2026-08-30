@@ -6,6 +6,7 @@
         "description": "Pick the Flightradar24 flights-in-area sensor. For a television, also pick the TV power media player and the Chromecast on that set.",
         "data": {
           "flights_entity": "Flights in area sensor",
+          "adsb_url": "Local ADS-B aircraft.json URL (optional)",
           "tv_enabled": "This TV is a flight board",
           "tv_power": "TV power (on/off)",
           "tv_player": "Chromecast on that TV",
@@ -22,7 +23,8 @@
       }
     },
     "error": {
-      "tv_player_required": "Choose the Chromecast media player if the TV is a flight board"
+      "tv_player_required": "Choose the Chromecast media player if the TV is a flight board",
+      "source_required": "Choose a flights sensor or a local ADS-B URL"
     },
     "abort": {
       "already_configured": "Flight Wall is already configured"
@@ -35,6 +37,7 @@
         "description": "Image mode is for a television whose Chromecast cannot load Home Assistant. Live mode is for a browser, tablet, or Chromecast that can.",
         "data": {
           "flights_entity": "Flights in area sensor",
+          "adsb_url": "Local ADS-B aircraft.json URL (optional)",
           "tv_enabled": "This TV is a flight board",
           "tv_power": "TV power (on/off)",
           "tv_player": "Chromecast on that TV",
@@ -51,7 +54,8 @@
       }
     },
     "error": {
-      "tv_player_required": "Choose the Chromecast media player if the TV is a flight board"
+      "tv_player_required": "Choose the Chromecast media player if the TV is a flight board",
+      "source_required": "Choose a flights sensor or a local ADS-B URL"
     }
   }
 }

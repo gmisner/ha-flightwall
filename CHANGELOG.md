@@ -10,6 +10,8 @@
   another flights sensor) can be added without collisions
 - Configure minimum altitude, clock format, airline marks, and TV quiet
   hours. Add a night-dim theme
+- Accept a local readsb / tar1090 `aircraft.json` URL or a sensor with
+  an `aircraft` attribute as the flights source
 
 ## 1.9.2
 
