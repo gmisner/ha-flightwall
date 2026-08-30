@@ -76,13 +76,13 @@ input_text:
     name: Flightwall Shown
     max: 255
     initial: "-"
-  # Google Cast media_player entity, e.g. media_player.guest_room_tv.
-  # This is the Chromecast, not the Vizio power entity. See docs/TV.md.
+  # Google Cast media_player entity, e.g. media_player.living_room_tv.
+  # This is the Chromecast, not the television power entity. See docs/TV.md.
   flightwall_tv_player:
     name: Flightwall TV Player
     max: 255
     icon: mdi:cast
-  # Vizio (or any) media_player used only to see that the TV is on.
+  # Television media_player used only to see that the TV is on.
   # The board casts when this goes on, and never turns the TV off.
   flightwall_tv_power:
     name: Flightwall TV Power
@@ -90,9 +90,9 @@ input_text:
     icon: mdi:television
 
 input_boolean:
-  # Leave on for a dedicated guest-room board. While this is on, turning
-  # the TV on shows the board; turning the TV off is the only off switch.
-  # Flip this off if someone in that room wants to watch something else.
+  # Leave on for a dedicated wall TV. While this is on, turning the TV
+  # on shows the board; turning the TV off is the only off switch.
+  # Flip this off if someone wants to watch something else.
   flightwall_tv:
     name: Flightwall TV
     icon: mdi:television

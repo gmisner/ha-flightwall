@@ -1,4 +1,4 @@
-"""Shared runtime: flight ranking plus guest-room TV image Cast."""
+"""Shared runtime: flight ranking plus TV image Cast."""
 
 from __future__ import annotations
 
@@ -340,7 +340,7 @@ class FlightwallRuntime:
         )
 
     async def async_cast(self, reason: str, delay: bool = False) -> None:
-        """Show the board on the guest-room Chromecast."""
+        """Show the board on the Chromecast."""
         if not self.tv_enabled or not self.tv_player:
             return
         if reason != "armed" and not self._tv_is_on():

@@ -10,7 +10,7 @@
 #   dot-matrix  - large LED panel look, airline logo on the left
 #   split-flap  - mechanical departure board, 22 characters wide, no logo
 #
-# Guest-room TV is a separate automation: automations/flightwall_tv.yaml.
+# Television Cast is a separate automation: automations/flightwall_tv.yaml.
 
 alias: Flightwall Popup
 description: Shows each aircraft once as it enters the zone

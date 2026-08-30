@@ -1,4 +1,4 @@
-# Flight Wall - guest-room TV
+# Flight Wall - television
 #
 # Paste this into Settings -> Automations -> Create automation -> three-dot
 # menu -> Edit in YAML. Do not add a leading "- " or an "automation:" key.
@@ -8,12 +8,12 @@
 # WAITING FOR TRAFFIC; the next aircraft updates in place.
 #
 # Requires the flight-wall dashboard (see docs/TV.md), HTTPS, Google Cast,
-# and the Vizio (or other) power entity in input_text.flightwall_tv_power.
-# Leave input_boolean.flightwall_tv on. Flip it off if that room wants
-# Netflix instead.
+# and the television power entity in input_text.flightwall_tv_power.
+# Leave input_boolean.flightwall_tv on. Flip it off to use the set for
+# something else.
 
 alias: Flightwall TV
-description: Casts the flight board while the guest-room TV is on
+description: Casts the flight board while the television is on
 triggers:
   - trigger: state
     entity_id: input_boolean.flightwall_tv

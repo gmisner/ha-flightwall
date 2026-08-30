@@ -1,268 +1,222 @@
 # Flight Wall
 
-A flight display for Home Assistant. When an aircraft passes overhead, a full-screen
-panel shows the airline, callsign, route, aircraft type, arrival estimate, live
-telemetry, and a flight progress bar — as a dot-matrix LED panel or as a mechanical
-split-flap departure board.
+A flight display for Home Assistant. When an aircraft passes overhead, a
+full-screen board shows the airline, callsign, route, aircraft type,
+arrival estimate, live telemetry, and a progress bar.
 
-Built for a wall-mounted tablet. Inspired by physical LED flight boards, in
-particular [The Flightwall](https://theflightwall.com/).
+Use it on a television (Chromecast) or a wall-mounted tablet. Inspired
+by physical LED flight boards, in particular
+[The Flightwall](https://theflightwall.com/).
 
 ![Dot-matrix style](docs/images/dot-matrix.jpg)
 
-## Two display styles
+## What it does
 
-Switch with `input_select.flightwall_style`. Takes effect on the next popup, no
-restart needed. Add the dropdown to any dashboard if you want to flip between them
-easily.
+- Picks the single most visible aircraft in range using **elevation
+  angle**, not ground distance. A jet at 38,000 ft ten kilometres away
+  is not the plane in the window; the one on approach at 3,000 ft is.
+- Shows city names, registration, heading, and a next-up flight when a
+  second aircraft is in range. Empty sky shows a clock and the last
+  aircraft overhead.
+- On a TV, writes a 4K board image and Casts it. On a tablet, a
+  full-screen popup can use the LED look or an animated split-flap
+  board.
 
-**`dot-matrix`** (default) — large LED panel look with the airline logo on the left
-and the route as the hero line. Shown above.
+## Themes
 
-**`split-flap`** — a mechanical departure board with printed row labels, in the style
-of an airport board. Each cell is a two-leaf flap that physically cycles through the
-alphabet until it reaches its letter, so reaching `Z` visibly takes longer than
-reaching `B`. Columns start in a left-to-right sweep with slight jitter, so they do
-not move in lockstep.
+The HACS integration (TV path) has four themes under
+**Settings → Devices & Services → Flight Wall → Configure**:
+
+| Theme | Look |
+|---|---|
+| **LED night** | Black board, blue muted text, green progress, LED grid |
+| **Plain large type** | Same colours, no grid — clearest on a large set |
+| **Amber departures** | Warm amber type on black |
+| **Split-flap** | Mechanical departure board (labels + 16-character flaps). Still image on TV; the tablet HTML page animates |
+
+Airline marks sit in a logo column. When Flightradar24 has no airline
+code, a generic aircraft mark is used so the layout stays the same.
+Split-flap has no logo — a real flap board cannot display one.
+
+The older tablet popup still switches with `input_select.flightwall_style`
+(`dot-matrix` or `split-flap`).
 
 ![Split-flap style](docs/images/split-flap.jpg)
 
-Labels are printed on the frame rather than set in flaps, which is how a real board
-does it. They are fixed unless you override them with `l1`–`l8` in the URL.
-
-No airline logo, deliberately: a flap board cannot display one. That also sidesteps
-the 128 px logo resolution ceiling. Values are hard-truncated at 16 characters.
-
-The board is a standalone HTML page at `www/splitflap.html`, rendered in an iframe.
-The automation passes the seven values and the progress figure as URL parameters, so
-the page knows nothing about Home Assistant and can be opened directly in a browser
-to preview it. This also sidesteps the markdown card's HTML sanitiser, which strips
-`class` attributes and scripts and therefore cannot animate individual characters.
-
-## What it does
-
-- Picks the single most visible aircraft in range using **elevation angle**, not
-  ground distance. A jet cruising at 11 km altitude that happens to be 9 km away
-  horizontally is not the plane you can see out of the window; the one on approach
-  at 3000 ft is. Sorting by distance alone gets this wrong constantly.
-- Shows each aircraft **once** as it enters the zone, rather than repeating while it
-  crosses.
-- Optionally wakes a wall-mounted tablet when traffic appears.
-
 ## Requirements
 
-### Home Assistant
-
-All four are required.
+### Television (HACS)
 
 | Component | Source | Why |
 |---|---|---|
-| [Flightradar24 integration](https://github.com/AlexandrErohin/home-assistant-flightradar24) | HACS | Flight data |
-| [browser-mod](https://github.com/thomasloven/hass-browser_mod) | HACS | Renders the full-screen popup |
-| [card-mod](https://github.com/thomasloven/lovelace-card-mod) | HACS | All styling |
-| [stack-in-card](https://github.com/custom-cards/stack-in-card) | HACS | Holds the display and the close button in one card, since `browser_mod.popup` accepts only one |
+| [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) | HACS | Flight data |
+| A `media_player` that reports TV on/off | Core (Vizio, webOS, Android TV, …) | Knows the set is on |
+| A Google Cast `media_player` on that set | Core | Receives the board image |
 
-### Optional hardware
+Home Assistant should be reachable over **HTTPS** (Nabu Casa or
+`external_url`) so Cast can discover it. The board image is served on
+the LAN as `/local/flightwall-board.png`.
 
-- A tablet or old phone for wall mounting.
-- [Fully Kiosk Browser](https://www.fully-kiosk.com/) with the **Plus licence**
-  (~€12 one-off) if you want Home Assistant to wake the screen. Without Plus the
-  remote API is unavailable and screen control is not possible.
+Do **not** also install `packages/flightwall.yaml` if you use HACS —
+you would get duplicate entities.
 
-### Caveat about the data source
+### Tablet popup (optional package)
 
-The Flightradar24 integration uses an undocumented endpoint. It is a grey area with
-respect to FR24's terms of service, and it will break whenever FR24 changes their
-API. Do not build anything load-bearing on it. If you want something durable, run a
-local ADS-B receiver (RTL-SDR dongle plus `readsb`/`tar1090`, around €40) and adapt
-the template sensor to read from that instead; the rest of this project works
-unchanged.
+| Component | Source | Why |
+|---|---|---|
+| [browser-mod](https://github.com/thomasloven/hass-browser_mod) | HACS | Full-screen popup |
+| [card-mod](https://github.com/thomasloven/lovelace-card-mod) | HACS | Styling |
+| [stack-in-card](https://github.com/custom-cards/stack-in-card) | HACS | Popup can only hold one card |
+
+Optional: [Fully Kiosk Browser](https://www.fully-kiosk.com/) with the
+Plus licence if Home Assistant should wake the tablet.
+
+### Data source
+
+The Flightradar24 integration uses an undocumented endpoint. It can
+break when FR24 changes their API. For something durable, run a local
+ADS-B receiver (RTL-SDR plus `readsb`/`tar1090`) and point the flights
+sensor at that instead.
 
 ## Installation
 
-### HACS (guest-room TV, recommended)
+### HACS (recommended)
 
-This is the path if you want the board on a Vizio / Chromecast TV. Do **not**
-also copy `packages/flightwall.yaml` — you would get duplicate entities.
-
-1. Install [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24) via HACS, set coordinates and a **30 km** radius, and rename the flights-in-area sensor to `sensor.flightradar24_flights_in_area` if you want the default name.
+1. Install [Flightradar24](https://github.com/AlexandrErohin/home-assistant-flightradar24)
+   via HACS. Set coordinates and a **30 km** radius. Rename the
+   flights-in-area sensor to `sensor.flightradar24_flights_in_area` if
+   you want the default name (the integration names it after your HA
+   language).
 2. HACS → three dots → **Custom repositories** →
-   `https://github.com/gmisner/ha-flightwall` → type **Integration** → Add.
+   `https://github.com/gmisner/ha-flightwall` → type **Integration** →
+   Add.
 3. Find **Flight Wall** in HACS and download it. Restart Home Assistant.
 4. **Settings → Devices & Services → Add integration → Flight Wall.**
-   Pick the FR24 flights sensor, the Vizio `media_player` (power), and the
-   Chromecast `media_player` on that TV.
-5. Home Assistant must be reachable over **HTTPS** (Nabu Casa or
-   `external_url`) for Cast discovery. The board image itself is sent over
-   the LAN (`http://…:8123/local/flightwall-board.png`).
-6. Leave `switch.flightwall_tv` on. Put it on a dashboard if someone in
-   that room will want Netflix instead. While the switch is on, turning
-   the TV on with the remote takes over Cast. If they then switch to
-   another app, Flight Wall stays out of the way until the set is turned
-   off and on again, or you re-arm the switch.
-7. **Display**, **Theme**, and **Units** are under
+   Pick the FR24 flights sensor. For a TV, also pick the power
+   `media_player` and the Chromecast `media_player` on that set.
+5. Leave `switch.flightwall_tv` on. Put it on a dashboard if someone
+   will want Netflix or another app in that room. While the switch is
+   on, turning the TV on with the remote starts Cast. If they then
+   switch to another source, Flight Wall stays out of the way until the
+   set is turned off and on, or you re-arm the switch.
+6. **Display**, **Theme**, and **Units** are under
    **Settings → Devices & Services → Flight Wall → Configure**.
-   Use **Image** on a 2019 Vizio or old Chromecast. Use **Live** on a
-   tablet, Fully Kiosk, or a Chromecast that can load Home Assistant.
-   If live Cast fails, the board image is shown instead. Theme includes
-   LED, plain, amber, and split-flap.
 
 The integration creates `sensor.flightwall_flight`, the inbound binary
-sensor, the TV switch, and a **Flightwall** sidebar dashboard. Turning the
-TV on with the remote should show the board after about ten seconds.
+sensor, the TV switch, and a **Flightwall** sidebar dashboard. The board
+should appear about ten seconds after the TV is turned on. Home
+Assistant never powers the set down.
 
-Tablet LED / split-flap popup is still the manual package path below
-(browser-mod, card-mod, stack-in-card).
+**Display**
 
-### Manual package (tablet popup)
+- **Image** — 4K PNG over Cast. Use this on a television whose built-in
+  Chromecast cannot load a live Home Assistant dashboard (many 2018–2020
+  smart TVs).
+- **Live** — Home Assistant Cast of the Flightwall dashboard. Use this
+  on a tablet, Fully Kiosk, or a Chromecast with Google TV. If live
+  Cast does not connect, Flight Wall falls back to the image.
 
-### 1. Set up Flightradar24
+**Units:** Imperial (ft, kt, mi) or Metric (m, km/h, km).
 
-Install via HACS, add the integration, and set your coordinates and a radius. **Start
-with 30 km.** Anything smaller and aircraft will have crossed your position before
-the next poll (the integration polls roughly every 30 seconds, and an airliner covers
-about 4 km in that time).
+Full TV notes: [docs/TV.md](docs/TV.md).
 
-Then go to **Settings → Devices & Services → Entities**, find the "flights in area"
-sensor, and rename it to:
+### Tablet popup (manual package)
 
-```
-sensor.flightradar24_flights_in_area
-```
+Use this only if you want the browser-mod LED / animated split-flap
+popup. Skip it if you installed from HACS and only want the TV.
 
-This step is not optional. The integration names entities after your Home Assistant
-language, so a German install gets `sensor.flightradar24_fluge_im_bereich`, a French
-one something else again. Renaming once is simpler than editing eight template
-references.
+#### 1. Flightradar24
 
-### 2. Install the package
+Install via HACS, set coordinates, start with a **30 km** radius, and
+rename the flights-in-area entity to
+`sensor.flightradar24_flights_in_area`.
 
-Enable packages in `configuration.yaml` if you have not already:
+#### 2. Package
 
 ```yaml
 homeassistant:
   packages: !include_dir_named packages
 ```
 
-Copy `packages/flightwall.yaml` into your `<config>/packages/` directory, edit the
-`rest_command` block at the bottom with your tablet's IP and Fully password, then
-restart Home Assistant.
+Copy `packages/flightwall.yaml` into `<config>/packages/`, edit the
+`rest_command` with the tablet IP and Fully password (or delete that
+block), then restart.
 
-This creates:
+#### 3. Split-flap page
 
-- `sensor.flightwall_flight` — the selected aircraft, with all its data in the
-  `flight` attribute
-- `binary_sensor.flightwall_inbound` — on while any aircraft is in range
-- `input_text.flightwall_shown` — remembers the last shown callsign
-- `input_boolean.flightwall_tv` — guest-room TV is a flight board (leave on)
-- `input_text.flightwall_tv_power` — Vizio `media_player` used as the on/off signal
-- `input_text.flightwall_tv_player` — the Google Cast `media_player` entity
-- `rest_command.tablet_stop_screensaver` — wakes the tablet
-
-### 3. Install the split-flap board page
-
-Only needed if you want the `split-flap` style. Copy `www/splitflap.html` to
-`<config>/www/flightwall/splitflap.html`, creating the folders if they do not exist,
-then restart Home Assistant — the `www` directory is only scanned at startup.
-
-Confirm it is served by opening it directly:
+Copy `www/splitflap.html` to
+`<config>/www/flightwall/splitflap.html` and restart. Preview:
 
 ```
 http://your-ha:8123/local/flightwall/splitflap.html
 ```
 
-With no parameters it renders a demo board, which is also the quickest way to tune
-the look without waiting for an aircraft.
+#### 4. Check data
 
-### 4. Verify the data before going further
+**Developer Tools → States → `sensor.flightwall_flight`**. If it is
+`none`, stop and see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
-Open **Developer Tools → States** and check `sensor.flightwall_flight`. If it says
-`none` with an empty `flight` attribute, stop here and fix that first — the display
-work downstream is pointless until data arrives. See
-[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+#### 5. Popup automation
 
-Also look at the attribute keys in the `flight` attribute. They come straight from
-FR24 and may differ from what the templates expect; every field is wrapped in a
-fallback, so a missing key degrades gracefully rather than breaking the layout, but
-you may see `IN FLIGHT` where you expected a route.
+**Settings → Automations → Create automation → Edit in YAML**, paste
+`automations/flightwall_popup.yaml`. No leading `- `, no `automation:`
+key. The popup shows each new aircraft once and closes after the
+timeout, on tap, or when the zone is empty.
 
-### 5. Add the automation
+#### 6. Optional TV without HACS
 
-Go to **Settings → Automations → Create automation**, then the three-dot menu →
-**Edit in YAML**, and paste the contents of `automations/flightwall_popup.yaml`.
-
-Do not include a leading `- ` or an `automation:` key — the editor expects a single
-automation body, and that is the most common paste error.
-
-The popup appears when new traffic arrives and closes after 60 seconds, on tap, or
-when the last aircraft leaves the zone.
-
-### 6. Optional: guest-room TV
-
-For a set that should *be* the flight board whenever someone turns it on
-(a guest room, a shop). The remote is the only on/off. Home Assistant
-never powers the TV down.
-
-A Vizio cannot run the tablet popup. Copy
-`dashboards/flightwall.yaml` and `themes/flightwall.yaml`, add the
-includes, paste `automations/flightwall_tv.yaml`, and fill the two TV
-helpers — Vizio power and Chromecast — then leave
-`input_boolean.flightwall_tv` on. Full walkthrough:
-[docs/TV.md](docs/TV.md).
-
-AirPlay on the Vizio is manual mirroring from an Apple device, not
-something HA can start.
+See [docs/TV.md](docs/TV.md). Prefer the HACS integration instead.
 
 ## Configuration
 
-Everything worth changing is documented in
-[docs/CUSTOMISATION.md](docs/CUSTOMISATION.md). The three settings most people want:
+HACS options live in the integration Configure dialog. Tablet popup
+behaviour is documented in [docs/CUSTOMISATION.md](docs/CUSTOMISATION.md).
 
 | What | Where | Default |
 |---|---|---|
-| Quiet hours | `condition: time` in the automation | 07:00–22:00 |
-| How long the popup stays | `timeout` in the automation | 60000 ms |
-| How long after the last aircraft the display stays active | `delay_off` on the binary sensor | 2 minutes |
-| Guest-room TV is a flight board | `input_boolean.flightwall_tv` | off until you finish TV setup |
-| Which TV reports on/off | `input_text.flightwall_tv_power` | empty |
-| Which Cast player to use | `input_text.flightwall_tv_player` | empty |
+| Display, theme, units | Integration → Configure | Image, LED night, imperial |
+| TV is a flight board | `switch.flightwall_tv` (HACS) or `input_boolean.flightwall_tv` | on after setup / off until setup |
+| Quiet hours (tablet) | `condition: time` in the popup automation | 07:00–22:00 |
+| How long the popup stays | `timeout` in the popup automation | 60000 ms |
+| How long after the last aircraft | `delay_off` on the inbound binary sensor | 2 minutes |
 
 ## Known limitations
 
-- **Airline logos max out at 128 px.** They come from the Kiwi CDN, which has no
-  higher resolution. Under a dot-matrix mask, wordmark logos in script fonts stay
-  hard to read no matter what. Roundels and simple marks work well.
-- **Logos are third-party.** If the Kiwi CDN goes away, logos break. Unknown airline
-  codes fall back to a generic aircraft icon from the same CDN.
-- **`aircraft_model` is not always populated.** When it is missing the display falls
-  back to the ICAO type code (`A320`, `B738`), which is less readable but always
-  present.
-- **The dot-matrix effect softens text by design.** It cuts holes in every glyph. The
-  mask spacing and the faux-bold `text-shadow` are tuned as a compromise; see
-  CUSTOMISATION for the two values to adjust.
-- **A Vizio cannot run the tablet LED or split-flap pages.** Those need a
-  browser. The guest-room path sends a 4K board image over Cast instead
-  (LED grid or plain large type). AirPlay is manual mirroring from an
-  Apple device, not something HA can start. See [docs/TV.md](docs/TV.md).
+- **Airline logos max out at 128 px** (Kiwi CDN). Roundels work; script
+  wordmarks stay hard to read under the LED grid.
+- **Missing logos** use a generic aircraft mark so the column does not
+  collapse.
+- **`aircraft_model` is not always populated.** The ICAO type code is
+  the fallback.
+- **The LED grid softens type on purpose.** Use the plain theme on a
+  large television if you want maximum sharpness.
+- **Many built-in Chromecasts cannot load a live Home Assistant
+  dashboard.** Use Display → Image. AirPlay is manual mirroring from an
+  Apple device; Home Assistant cannot start it. See
+  [docs/TV.md](docs/TV.md).
+- **Split-flap values are 16 characters.** Longer airline or aircraft
+  names truncate.
 
 ## Trademarks and affiliation
 
-This is an independent hobby project. It is not affiliated with, endorsed by,
-sponsored by, or connected to The Flightwall, Flightradar24, Kiwi.com, or any
-airline.
+This is an independent hobby project. It is not affiliated with,
+endorsed by, sponsored by, or connected to The Flightwall,
+Flightradar24, Kiwi.com, or any airline.
 
-All product names, logos, and brands are the property of their respective owners.
-Airline logos are fetched at display time from a third-party CDN and shown solely to
-identify the aircraft currently overhead. If you would rather not display them, set
-the image filter to `grayscale(1)` for a monochrome LED look, or point the URL at
-your own assets — see [docs/CUSTOMISATION.md](docs/CUSTOMISATION.md).
+All product names, logos, and brands are the property of their
+respective owners. Airline logos are fetched at display time from a
+third-party CDN and shown solely to identify the aircraft currently
+overhead.
 
 ## Credits
 
-Inspired by [The Flightwall](https://theflightwall.com/). Flight data via the
+Inspired by [The Flightwall](https://theflightwall.com/). Flight data
+via the
 [Flightradar24 integration](https://github.com/AlexandrErohin/home-assistant-flightradar24)
-by AlexandrErohin. Airline logos from the Kiwi.com CDN. Typeface is
-[Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P) by CodeMan38.
+by AlexandrErohin. Airline logos from the Kiwi.com CDN. Tablet typeface
+is [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P)
+by CodeMan38. TV board typeface is
+[Roboto](https://fonts.google.com/specimen/Roboto).
 
 ## Licence
 

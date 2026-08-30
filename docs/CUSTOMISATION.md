@@ -1,5 +1,20 @@
 # Customisation
 
+## HACS integration
+
+**Settings → Devices & Services → Flight Wall → Configure:**
+
+| Option | What it does |
+|---|---|
+| **Units** | Imperial (ft, kt, mi) or Metric (m, km/h, km) |
+| **Display** | **Image** — 4K PNG over Cast (use on older Chromecasts). **Live** — Home Assistant dashboard (browser, tablet, or a Chromecast that can load HA). Live falls back to the image if Cast never connects. |
+| **Theme** | LED night, plain large type, amber departures, or split-flap |
+| **This TV is a flight board** | Same as `switch.flightwall_tv`. Off leaves the set alone. |
+
+TV walkthrough: [TV.md](TV.md). The rest of this page is the optional tablet
+popup package (`packages/flightwall.yaml` and `automations/flightwall_popup.yaml`).
+Do not install that package if you already use the HACS integration.
+
 ## Behaviour
 
 ### Quiet hours
@@ -22,14 +37,16 @@ Two values, and they are independent:
 - `timeout: 60000` in the automation (milliseconds)
 - nothing else — the progress bar shows flight progress, not a countdown
 
-### Guest-room TV
+### Television
 
 Walkthrough in [TV.md](TV.md). The HACS integration writes a 4K PNG and
-Casts it. Units and LED vs plain type are under the integration's
-Configure dialog. Helpers for the manual package path:
+Casts it. **Display**, **Theme**, and **Units** are under the
+integration's Configure dialog.
+
+Helpers for the manual package path only:
 
 - `input_boolean.flightwall_tv` — leave on; off means that room is for TV
-- `input_text.flightwall_tv_power` — Vizio `media_player` (on/off)
+- `input_text.flightwall_tv_power` — television `media_player` (on/off)
 - `input_text.flightwall_tv_player` — Chromecast `media_player`
 
 ### How long the display stays active after the last aircraft
@@ -71,9 +88,10 @@ The template filters `altitude > 500` to exclude aircraft on the ground. If you 
 inside an airport's radius, taxiing aircraft would otherwise permanently win the
 ranking. Raise it if you only care about aircraft at cruise.
 
-## Appearance
+## Appearance (tablet popup)
 
-All in the `card_mod` block.
+These CSS notes apply to the browser-mod popup, not the 4K TV image.
+TV look is **Theme** in the integration Configure dialog.
 
 ### Dot-matrix mask
 

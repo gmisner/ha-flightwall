@@ -136,15 +136,24 @@ idempotent, so this costs nothing.
 
 ## TV does not show the board
 
-Guest-room walkthrough is in [TV.md](TV.md). In order:
+Walkthrough is in [TV.md](TV.md). In order:
+
+**HACS**
+
+1. `switch.flightwall_tv` is on.
+2. The integration's TV power entity is the **television** `media_player`.
+3. The Cast player entity is the **Google Cast** `media_player` on that set.
+4. Home Assistant is reachable over HTTPS (`external_url` or Nabu Casa).
+5. Display is **Image** if the Chromecast cannot load a live dashboard.
+
+**Manual package**
 
 1. `input_boolean.flightwall_tv` is on.
-2. `input_text.flightwall_tv_power` is the **Vizio** `media_player`.
-3. `input_text.flightwall_tv_player` is the **Google Cast** `media_player`.
-4. Home Assistant is reachable over HTTPS (`external_url` or Nabu Casa).
-5. The `flight-wall` dashboard opens in the sidebar.
-6. `automations/flightwall_tv.yaml` is installed.
+2. `input_text.flightwall_tv_power` is the television `media_player`.
+3. `input_text.flightwall_tv_player` is the Google Cast `media_player`.
+4. The `flight-wall` dashboard opens in the sidebar.
+5. `automations/flightwall_tv.yaml` is installed.
 
-The board should appear about ten seconds after the TV is turned on. HA
-will not turn the TV off. AirPlay is screen mirroring from an Apple
-device only — it will not fire from this automation.
+The board should appear about ten seconds after the TV is turned on.
+Home Assistant will not turn the TV off. AirPlay is screen mirroring
+from an Apple device only.

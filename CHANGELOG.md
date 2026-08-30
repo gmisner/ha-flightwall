@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.2
+
+- Public install guide and docs: television vs tablet paths, current
+  Display / Theme / Units options, no household-specific wording
+- Config flow copy matches the same language
+
 ## 1.9.1
 
 - Scale the split-flap board to fill a 16:9 TV instead of sitting in a

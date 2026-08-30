@@ -84,7 +84,7 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                         "options": [
                             {
                                 "value": DISPLAY_IMAGE,
-                                "label": "Image (Cast-safe, Vizio / old Chromecast)",
+                                "label": "Image (Cast-safe, older Chromecast / smart TV)",
                             },
                             {
                                 "value": DISPLAY_LIVE,

@@ -1,4 +1,4 @@
-"""Arm or disarm the guest-room TV board."""
+"""Arm or disarm the television flight board."""
 
 from __future__ import annotations
 
