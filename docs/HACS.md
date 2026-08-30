@@ -11,7 +11,7 @@ https://www.hacs.xyz/docs/publish/include/
 
 ## Checklist before submitting
 
-- [x] Latest release is tagged (**1.10.1**, after HACS and hassfest passed)
+- [x] Latest release is tagged (**1.10.2**)
 - [x] `hacs.json` has `"render_readme": true`
 - [x] README install steps work on a clean Home Assistant
 - [x] `manifest.json` `version` matches the git tag

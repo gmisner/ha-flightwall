@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.10.2
 
 - Refresh the static TV image on a configurable interval (default 20 seconds)
   while Cast is showing the board
