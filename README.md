@@ -1,5 +1,7 @@
 # Flight Wall
 
+![Flight Wall](docs/images/icon.png)
+
 A flight display for Home Assistant. When an aircraft passes overhead, a
 full-screen board shows the airline, callsign, route, aircraft type,
 arrival estimate, live telemetry, and a progress bar.

@@ -17,6 +17,9 @@ https://www.hacs.xyz/docs/publish/include/
 - [ ] `manifest.json` `version` matches the git tag
 - [ ] Theme preview images in `docs/images/tv-*.png` are current
   (`python scripts/render_previews.py` from a venv with Pillow)
+- [x] Brand images in `custom_components/flightwall/brand/` (`icon.png`, `logo.png`)
+- [ ] GitHub social preview set to `docs/images/social.png`
+  (repo Settings → General → Social preview)
 - [ ] No household-specific names in docs or config-flow copy
 
 ## What reviewers will look at

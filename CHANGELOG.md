@@ -15,6 +15,7 @@
 - Copy the split-flap tablet page into `/local/flightwall/` from the
   integration, so HACS is the only install path
 - Add TV theme previews and a HACS default-listing checklist
+- Add integration brand icon and logo for Home Assistant / HACS
 
 ## 1.9.2
 
