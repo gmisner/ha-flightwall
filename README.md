@@ -76,8 +76,14 @@ Plus licence if Home Assistant should wake the tablet.
 
 The Flightradar24 integration uses an undocumented endpoint. It can
 break when FR24 changes their API. For something durable, run a local
-ADS-B receiver (RTL-SDR plus `readsb`/`tar1090`) and point the flights
-sensor at that instead.
+ADS-B receiver (RTL-SDR plus `readsb`/`tar1090`) and either:
+
+- paste the `aircraft.json` URL in Flight Wall → Configure, or
+- point a REST sensor with an `aircraft` attribute at that URL and pick
+  that sensor as the flights source.
+
+Local ADS-B has callsign, type, and registration, but not airline
+logos or city-pair routes.
 
 ## Installation
 

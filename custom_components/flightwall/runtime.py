@@ -20,10 +20,13 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.helpers.network import get_url
 
+from .adsb import flights_from_attributes
 from .board_copy import build_board
 from .board_image import write_board_png
 from .const import (
+    ADSB_POLL,
     BOARD_PNG_NAME,
+    CONF_ADSB_URL,
     CONF_BOARD_STYLE,
     CONF_DISPLAY_MODE,
     CONF_FLIGHTS_ENTITY,
@@ -86,10 +89,17 @@ class FlightwallRuntime:
         self._unsubs: list[CALLBACK_TYPE] = []
         self._inbound_unsub: CALLBACK_TYPE | None = None
         self._cast_delay_unsub: CALLBACK_TYPE | None = None
+        self._adsb_attributes: dict[str, Any] | None = None
 
     @property
     def flights_entity(self) -> str:
-        return self.entry.data.get(CONF_FLIGHTS_ENTITY, DEFAULT_FLIGHTS_ENTITY)
+        return (self.entry.data.get(CONF_FLIGHTS_ENTITY) or "").strip() or (
+            DEFAULT_FLIGHTS_ENTITY if not self.adsb_url else ""
+        )
+
+    @property
+    def adsb_url(self) -> str:
+        return (self.entry.data.get(CONF_ADSB_URL) or "").strip()
 
     @property
     def tv_power(self) -> str:
@@ -176,11 +186,17 @@ class FlightwallRuntime:
 
     async def async_setup(self) -> None:
         self._refresh_flight()
-        self._unsubs.append(
-            async_track_state_change_event(
-                self.hass, [self.flights_entity], self._source_changed
+        if self.flights_entity:
+            self._unsubs.append(
+                async_track_state_change_event(
+                    self.hass, [self.flights_entity], self._source_changed
+                )
             )
-        )
+        if self.adsb_url:
+            self._unsubs.append(
+                async_track_time_interval(self.hass, self._poll_adsb, ADSB_POLL)
+            )
+            self.hass.add_job(self._poll_adsb(None))
         if self.tv_power:
             self._unsubs.append(
                 async_track_state_change_event(
@@ -228,13 +244,39 @@ class FlightwallRuntime:
         except (KeyError, ValueError):
             return datetime.now().astimezone()
 
+    async def _poll_adsb(self, _now: datetime | None) -> None:
+        if not self.adsb_url:
+            return
+        try:
+            from aiohttp import ClientTimeout
+            from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+            session = async_get_clientsession(self.hass)
+            async with session.get(
+                self.adsb_url, timeout=ClientTimeout(total=8)
+            ) as response:
+                data = await response.json(content_type=None)
+        except Exception as err:  # noqa: BLE001 — poll must never raise
+            _LOGGER.debug("ADS-B poll failed: %s", err)
+            return
+        if isinstance(data, dict):
+            self._adsb_attributes = data
+            previous = self.callsign
+            self._refresh_flight()
+            if self.callsign != previous:
+                await self.async_cast(reason="flight")
+
     def _refresh_flight(self) -> None:
-        state = self.hass.states.get(self.flights_entity)
-        flights = []
-        if state is not None:
-            raw = state.attributes.get("flights") or []
-            if isinstance(raw, list):
-                flights = [f for f in raw if isinstance(f, dict)]
+        attrs: dict[str, Any] | None = self._adsb_attributes
+        if attrs is None and self.flights_entity:
+            state = self.hass.states.get(self.flights_entity)
+            if state is not None:
+                attrs = dict(state.attributes)
+        flights = flights_from_attributes(
+            attrs,
+            float(self.hass.config.latitude or 0),
+            float(self.hass.config.longitude or 0),
+        )
 
         ranked = rank_flights(flights, self.min_altitude_ft)
         selected = ranked[0] if ranked else None

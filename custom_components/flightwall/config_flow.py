@@ -11,6 +11,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.selector import selector
 
 from .const import (
+    CONF_ADSB_URL,
     CONF_BOARD_STYLE,
     CONF_DISPLAY_MODE,
     CONF_FLIGHTS_ENTITY,
@@ -55,10 +56,18 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
     defaults = defaults or {}
     return vol.Schema(
         {
-            vol.Required(
+            vol.Optional(
                 CONF_FLIGHTS_ENTITY,
-                default=defaults.get(CONF_FLIGHTS_ENTITY, DEFAULT_FLIGHTS_ENTITY),
+                description={
+                    "suggested_value": defaults.get(
+                        CONF_FLIGHTS_ENTITY, DEFAULT_FLIGHTS_ENTITY
+                    )
+                },
             ): selector({"entity": {"domain": "sensor"}}),
+            vol.Optional(
+                CONF_ADSB_URL,
+                description={"suggested_value": defaults.get(CONF_ADSB_URL, "")},
+            ): selector({"text": {"type": "url"}}),
             vol.Required(
                 CONF_TV_ENABLED,
                 default=defaults.get(CONF_TV_ENABLED, True),
@@ -209,7 +218,7 @@ class FlightwallConfigFlow(ConfigFlow, domain=DOMAIN):
             errors = _validate(user_input)
             if not errors:
                 unique = (
-                    f"{user_input.get(CONF_FLIGHTS_ENTITY)}|"
+                    f"{user_input.get(CONF_FLIGHTS_ENTITY) or user_input.get(CONF_ADSB_URL)}|"
                     f"{user_input.get(CONF_TV_PLAYER) or 'no-tv'}"
                 )
                 await self.async_set_unique_id(unique)
@@ -267,4 +276,6 @@ def _validate(user_input: dict[str, Any]) -> dict[str, str]:
     errors: dict[str, str] = {}
     if user_input.get(CONF_TV_ENABLED) and not user_input.get(CONF_TV_PLAYER):
         errors[CONF_TV_PLAYER] = "tv_player_required"
+    if not user_input.get(CONF_FLIGHTS_ENTITY) and not user_input.get(CONF_ADSB_URL):
+        errors[CONF_FLIGHTS_ENTITY] = "source_required"
     return errors

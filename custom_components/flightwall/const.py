@@ -18,6 +18,9 @@ CONF_SHOW_LOGOS = "show_logos"
 CONF_QUIET_ENABLED = "quiet_enabled"
 CONF_QUIET_START = "quiet_start"
 CONF_QUIET_END = "quiet_end"
+CONF_ADSB_URL = "adsb_url"
+
+ADSB_POLL = timedelta(seconds=10)
 
 UNIT_IMPERIAL = "imperial"
 UNIT_METRIC = "metric"
