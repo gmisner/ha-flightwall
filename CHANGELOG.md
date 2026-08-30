@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.2
+
+- Hide the logo tile when there is no airline mark, and leave a wider gap
+  when there is one, so registration text no longer sits on the box
+
 ## 1.8.1
 
 - Keep the route and flight text out of the airline logo column

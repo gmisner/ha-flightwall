@@ -193,17 +193,23 @@ def _draw_flight(
     stats_font: ImageFont.ImageFont,
 ) -> None:
     logo = _airline_logo(board.logo_iata, style)
-    tile = colors["logo_tile"]
-    logo_box = (_s(80), _s(80), _s(380), _s(380))
-    draw.rounded_rectangle(logo_box, radius=_s(8), fill=tile)
     if logo is not None:
-        box = Image.new("RGBA", (_s(300), _s(300)), (*tile, 255))
-        lx = (_s(300) - logo.width) // 2
-        ly = (_s(300) - logo.height) // 2
+        tile = colors["logo_tile"]
+        size = _s(260)
+        origin = (_s(80), _s(80))
+        draw.rounded_rectangle(
+            (origin[0], origin[1], origin[0] + size, origin[1] + size),
+            radius=_s(8),
+            fill=tile,
+        )
+        box = Image.new("RGBA", (size, size), (*tile, 255))
+        lx = (size - logo.width) // 2
+        ly = (size - logo.height) // 2
         box.paste(logo, (lx, ly), logo)
-        image.paste(box.convert("RGB"), (_s(80), _s(80)))
-
-    left = _s(520)
+        image.paste(box.convert("RGB"), origin)
+        left = origin[0] + size + _s(80)
+    else:
+        left = _s(120)
     y = _s(80)
     draw.text((left, y), board.title, font=callsign_font, fill=colors["muted"])
     y = _s(150)

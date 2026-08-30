@@ -208,7 +208,12 @@ def build_board(
             next_flight.get("aircraft_registration")
         )
         if next_callsign:
-            next_line = f"NEXT  {next_callsign}  {route_of(next_flight)}"
+            route = route_of(next_flight)
+            next_line = (
+                f"NEXT  {next_callsign}"
+                if next_callsign == route
+                else f"NEXT  {next_callsign}  {route}"
+            )
 
     return BoardCopy(
         has_flight=True,
