@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from .const import UNIT_METRIC
+from .const import TIME_12H, TIME_24H, TIME_FOLLOW_UNITS, UNIT_METRIC
 
 CARDINALS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 
@@ -61,8 +61,15 @@ def cities_of(flight: dict[str, Any]) -> str:
     return origin or dest
 
 
-def clock_text(now: datetime, units: str) -> str:
-    if units == UNIT_METRIC:
+def clock_text(
+    now: datetime,
+    units: str,
+    time_format: str = TIME_FOLLOW_UNITS,
+) -> str:
+    use_24 = time_format == TIME_24H or (
+        time_format != TIME_12H and units == UNIT_METRIC
+    )
+    if use_24:
         return now.strftime("%H:%M")
     hour = now.hour % 12 or 12
     return f"{hour}:{now.strftime('%M')} {now.strftime('%p')}".upper()
@@ -123,6 +130,7 @@ class BoardCopy:
     last_line: str
     last_ago: str
     logo_iata: str
+    show_logos: bool
     flap_rows: list[tuple[str, str]]
 
     def as_dict(self) -> dict[str, Any]:
@@ -136,9 +144,12 @@ def build_board(
     last_flight: dict[str, Any] | None = None,
     last_seen: datetime | None = None,
     next_flight: dict[str, Any] | None = None,
+    time_format: str = TIME_FOLLOW_UNITS,
+    show_logos: bool = True,
 ) -> BoardCopy:
     now = now or datetime.now(UTC)
     date = f"{now.strftime('%a')} {now.day} {now.strftime('%b')}".upper()
+    clock = clock_text(now, units, time_format)
     if not flight:
         last_line = ""
         last_ago = ""
@@ -163,14 +174,15 @@ def build_board(
             progress=0,
             next_line="",
             date=date,
-            clock=clock_text(now, units),
+            clock=clock,
             last_label="LAST OVERHEAD" if last_line else "",
             last_line=last_line,
             last_ago=last_ago,
             logo_iata="",
+            show_logos=False,
             flap_rows=[
                 ("STATUS", "WAITING"),
-                ("TIME", clock_text(now, units)),
+                ("TIME", clock),
                 ("DATE", date),
                 ("LAST", last_line),
                 ("SEEN", last_ago),
@@ -242,11 +254,12 @@ def build_board(
         progress=progress_of(flight, now),
         next_line=next_line,
         date=date,
-        clock=clock_text(now, units),
+        clock=clock,
         last_label="",
         last_line="",
         last_ago="",
-        logo_iata=clean(flight.get("airline_iata")).upper(),
+        logo_iata=clean(flight.get("airline_iata")).upper() if show_logos else "",
+        show_logos=show_logos,
         flap_rows=[
             ("FLIGHT", callsign),
             ("AIRCRAFT", model),

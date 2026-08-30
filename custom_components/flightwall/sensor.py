@@ -65,4 +65,7 @@ class FlightwallFlightSensor(SensorEntity):
             "units": self._runtime.units,
             "theme": self._runtime.board_style,
             "display_mode": self._runtime.display_mode,
+            "time_format": self._runtime.time_format,
+            "show_logos": self._runtime.show_logos,
+            "min_altitude_ft": self._runtime.min_altitude_ft,
         }

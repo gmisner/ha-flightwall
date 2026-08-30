@@ -12,6 +12,12 @@ CONF_UNITS = "units"
 CONF_BOARD_STYLE = "board_style"
 CONF_THEME = "theme"
 CONF_DISPLAY_MODE = "display_mode"
+CONF_MIN_ALTITUDE = "min_altitude"
+CONF_TIME_FORMAT = "time_format"
+CONF_SHOW_LOGOS = "show_logos"
+CONF_QUIET_ENABLED = "quiet_enabled"
+CONF_QUIET_START = "quiet_start"
+CONF_QUIET_END = "quiet_end"
 
 UNIT_IMPERIAL = "imperial"
 UNIT_METRIC = "metric"
@@ -21,8 +27,19 @@ STYLE_LED = "led"
 STYLE_PLAIN = "plain"
 STYLE_AMBER = "amber"
 STYLE_SPLITFLAP = "splitflap"
+STYLE_NIGHT = "night"
 DEFAULT_BOARD_STYLE = STYLE_LED
 DEFAULT_THEME = STYLE_LED
+
+TIME_FOLLOW_UNITS = "follow_units"
+TIME_12H = "12h"
+TIME_24H = "24h"
+DEFAULT_TIME_FORMAT = TIME_FOLLOW_UNITS
+DEFAULT_MIN_ALTITUDE = 500
+DEFAULT_SHOW_LOGOS = True
+DEFAULT_QUIET_ENABLED = False
+DEFAULT_QUIET_START = "22:00:00"
+DEFAULT_QUIET_END = "07:00:00"
 
 DISPLAY_IMAGE = "image"
 DISPLAY_LIVE = "live"
@@ -33,6 +50,7 @@ THEME_HA = {
     STYLE_PLAIN: "flightwall-plain",
     STYLE_AMBER: "flightwall-amber",
     STYLE_SPLITFLAP: "flightwall-splitflap",
+    STYLE_NIGHT: "flightwall-night",
 }
 
 MIN_ALTITUDE_FT = 500

@@ -14,22 +14,38 @@ from .const import (
     CONF_BOARD_STYLE,
     CONF_DISPLAY_MODE,
     CONF_FLIGHTS_ENTITY,
+    CONF_MIN_ALTITUDE,
+    CONF_QUIET_ENABLED,
+    CONF_QUIET_END,
+    CONF_QUIET_START,
+    CONF_SHOW_LOGOS,
     CONF_THEME,
+    CONF_TIME_FORMAT,
     CONF_TV_ENABLED,
     CONF_TV_PLAYER,
     CONF_TV_POWER,
     CONF_UNITS,
     DEFAULT_DISPLAY_MODE,
     DEFAULT_FLIGHTS_ENTITY,
+    DEFAULT_MIN_ALTITUDE,
+    DEFAULT_QUIET_ENABLED,
+    DEFAULT_QUIET_END,
+    DEFAULT_QUIET_START,
+    DEFAULT_SHOW_LOGOS,
     DEFAULT_THEME,
+    DEFAULT_TIME_FORMAT,
     DEFAULT_UNITS,
     DISPLAY_IMAGE,
     DISPLAY_LIVE,
     DOMAIN,
     STYLE_AMBER,
     STYLE_LED,
+    STYLE_NIGHT,
     STYLE_PLAIN,
     STYLE_SPLITFLAP,
+    TIME_12H,
+    TIME_24H,
+    TIME_FOLLOW_UNITS,
     UNIT_IMPERIAL,
     UNIT_METRIC,
 )
@@ -119,11 +135,63 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                                 "value": STYLE_SPLITFLAP,
                                 "label": "Split-flap",
                             },
+                            {
+                                "value": STYLE_NIGHT,
+                                "label": "Night dim",
+                            },
                         ],
                         "mode": "dropdown",
                     }
                 }
             ),
+            vol.Required(
+                CONF_MIN_ALTITUDE,
+                default=defaults.get(CONF_MIN_ALTITUDE, DEFAULT_MIN_ALTITUDE),
+            ): selector(
+                {
+                    "number": {
+                        "min": 0,
+                        "max": 50000,
+                        "step": 100,
+                        "unit_of_measurement": "ft",
+                        "mode": "box",
+                    }
+                }
+            ),
+            vol.Required(
+                CONF_TIME_FORMAT,
+                default=defaults.get(CONF_TIME_FORMAT, DEFAULT_TIME_FORMAT),
+            ): selector(
+                {
+                    "select": {
+                        "options": [
+                            {
+                                "value": TIME_FOLLOW_UNITS,
+                                "label": "Follow units (12h imperial, 24h metric)",
+                            },
+                            {"value": TIME_12H, "label": "12-hour"},
+                            {"value": TIME_24H, "label": "24-hour"},
+                        ],
+                        "mode": "dropdown",
+                    }
+                }
+            ),
+            vol.Required(
+                CONF_SHOW_LOGOS,
+                default=defaults.get(CONF_SHOW_LOGOS, DEFAULT_SHOW_LOGOS),
+            ): bool,
+            vol.Required(
+                CONF_QUIET_ENABLED,
+                default=defaults.get(CONF_QUIET_ENABLED, DEFAULT_QUIET_ENABLED),
+            ): bool,
+            vol.Optional(
+                CONF_QUIET_START,
+                default=defaults.get(CONF_QUIET_START, DEFAULT_QUIET_START),
+            ): selector({"time": {}}),
+            vol.Optional(
+                CONF_QUIET_END,
+                default=defaults.get(CONF_QUIET_END, DEFAULT_QUIET_END),
+            ): selector({"time": {}}),
         }
     )
 

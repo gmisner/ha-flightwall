@@ -268,6 +268,23 @@ flightwall-splitflap:
   ha-card-border-radius: 0px
   ha-card-box-shadow: "none"
   lovelace-background: "#08090b"
+
+flightwall-night:
+  primary-color: "#8ca0be"
+  accent-color: "#1e7850"
+  primary-background-color: "#04060a"
+  secondary-background-color: "#04060a"
+  card-background-color: "#04060a"
+  primary-text-color: "#8ca0be"
+  secondary-text-color: "#465a78"
+  text-primary-color: "#8ca0be"
+  app-header-background-color: "#04060a"
+  app-header-text-color: "#8ca0be"
+  ha-card-background: "#04060a"
+  ha-card-border-width: 0px
+  ha-card-border-radius: 0px
+  ha-card-box-shadow: "none"
+  lovelace-background: "#04060a"
 """,
             encoding="utf-8",
         )

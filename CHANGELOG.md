@@ -8,6 +8,8 @@
 - Add `flightwall.recast` and a config-entry diagnostics dump
 - Stop pinning entity IDs so a second Flight Wall (another TV or
   another flights sensor) can be added without collisions
+- Configure minimum altitude, clock format, airline marks, and TV quiet
+  hours. Add a night-dim theme
 
 ## 1.9.2
 
