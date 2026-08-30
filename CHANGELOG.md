@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.8.3
+
+- Always show a logo tile: airline mark when we have one, otherwise a
+  generic aircraft so every flight uses the same layout
+
 ## 1.8.2
 
 - Hide the logo tile when there is no airline mark, and leave a wider gap

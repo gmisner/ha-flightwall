@@ -28,6 +28,7 @@ PALETTES = {
         "bar": (53, 255, 122),
         "bar_dim": (20, 70, 40),
         "logo_tile": (214, 214, 214),
+        "mark": (28, 44, 82),
         "grid": True,
     },
     "plain": {
@@ -37,6 +38,7 @@ PALETTES = {
         "bar": (53, 255, 122),
         "bar_dim": (20, 70, 40),
         "logo_tile": (214, 214, 214),
+        "mark": (28, 44, 82),
         "grid": False,
     },
     STYLE_AMBER: {
@@ -46,6 +48,7 @@ PALETTES = {
         "bar": (255, 159, 26),
         "bar_dim": (70, 40, 10),
         "logo_tile": (48, 36, 16),
+        "mark": (255, 184, 74),
         "grid": False,
     },
 }
@@ -90,6 +93,41 @@ def _airline_logo(iata: str, style: str) -> Image.Image | None:
     size = (_s(LOGO_TARGET), _s(LOGO_TARGET))
     resample = Image.Resampling.NEAREST if style == STYLE_LED else Image.Resampling.LANCZOS
     return logo.resize(size, resample)
+
+
+def _generic_mark(size: int, fill: tuple[int, int, int]) -> Image.Image:
+    """Simple top-down aircraft so every flight has the same logo column."""
+    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    scale = size / 100
+
+    def pts(*pairs: tuple[float, float]) -> list[tuple[float, float]]:
+        return [(x * scale, y * scale) for x, y in pairs]
+
+    draw.polygon(
+        pts(
+            (50, 10),
+            (55, 30),
+            (55, 44),
+            (90, 58),
+            (90, 66),
+            (55, 60),
+            (55, 78),
+            (68, 90),
+            (68, 95),
+            (50, 88),
+            (32, 95),
+            (32, 90),
+            (45, 78),
+            (45, 60),
+            (10, 66),
+            (10, 58),
+            (45, 44),
+            (45, 30),
+        ),
+        fill=(*fill, 255),
+    )
+    return image
 
 
 def _dot_matrix(image: Image.Image, cell: int = CELL) -> Image.Image:
@@ -192,24 +230,23 @@ def _draw_flight(
     body_font: ImageFont.ImageFont,
     stats_font: ImageFont.ImageFont,
 ) -> None:
+    tile = colors["logo_tile"]
+    size = _s(260)
+    origin = (_s(80), _s(80))
     logo = _airline_logo(board.logo_iata, style)
-    if logo is not None:
-        tile = colors["logo_tile"]
-        size = _s(260)
-        origin = (_s(80), _s(80))
-        draw.rounded_rectangle(
-            (origin[0], origin[1], origin[0] + size, origin[1] + size),
-            radius=_s(8),
-            fill=tile,
-        )
-        box = Image.new("RGBA", (size, size), (*tile, 255))
-        lx = (size - logo.width) // 2
-        ly = (size - logo.height) // 2
-        box.paste(logo, (lx, ly), logo)
-        image.paste(box.convert("RGB"), origin)
-        left = origin[0] + size + _s(80)
-    else:
-        left = _s(120)
+    if logo is None:
+        logo = _generic_mark(int(size * 0.72), colors["mark"])
+    draw.rounded_rectangle(
+        (origin[0], origin[1], origin[0] + size, origin[1] + size),
+        radius=_s(8),
+        fill=tile,
+    )
+    box = Image.new("RGBA", (size, size), (*tile, 255))
+    lx = (size - logo.width) // 2
+    ly = (size - logo.height) // 2
+    box.paste(logo, (lx, ly), logo)
+    image.paste(box.convert("RGB"), origin)
+    left = origin[0] + size + _s(80)
     y = _s(80)
     draw.text((left, y), board.title, font=callsign_font, fill=colors["muted"])
     y = _s(150)
