@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.1
+
+- Keep the route and flight text out of the airline logo column
+
 ## 1.8.0
 
 - Configure **Display**: Image (Cast-safe) or Live dashboard (HA Cast / browser)

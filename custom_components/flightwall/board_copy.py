@@ -145,7 +145,8 @@ def build_board(
             callsign = clean(last_flight.get("callsign")) or clean(
                 last_flight.get("aircraft_registration"), "LAST FLIGHT"
             )
-            last_line = f"{callsign}  {route_of(last_flight)}"
+            route = route_of(last_flight)
+            last_line = callsign if callsign == route else f"{callsign}  {route}"
             if last_seen is not None:
                 elapsed = int((now - last_seen).total_seconds())
                 last_ago = "JUST NOW" if elapsed < 60 else f"{ago(elapsed)} AGO"

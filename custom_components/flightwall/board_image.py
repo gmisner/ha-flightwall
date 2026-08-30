@@ -194,22 +194,21 @@ def _draw_flight(
 ) -> None:
     logo = _airline_logo(board.logo_iata, style)
     tile = colors["logo_tile"]
-    draw.rounded_rectangle(
-        (_s(80), _s(280), _s(360), _s(560)), radius=_s(8), fill=tile
-    )
+    logo_box = (_s(80), _s(80), _s(380), _s(380))
+    draw.rounded_rectangle(logo_box, radius=_s(8), fill=tile)
     if logo is not None:
-        box = Image.new("RGBA", (_s(280), _s(280)), (*tile, 255))
-        lx = (_s(280) - logo.width) // 2
-        ly = (_s(280) - logo.height) // 2
+        box = Image.new("RGBA", (_s(300), _s(300)), (*tile, 255))
+        lx = (_s(300) - logo.width) // 2
+        ly = (_s(300) - logo.height) // 2
         box.paste(logo, (lx, ly), logo)
-        image.paste(box.convert("RGB"), (_s(80), _s(280)))
+        image.paste(box.convert("RGB"), (_s(80), _s(80)))
 
-    left = _s(420) if logo is not None or board.logo_iata else _s(120)
+    left = _s(520)
     y = _s(80)
     draw.text((left, y), board.title, font=callsign_font, fill=colors["muted"])
     y = _s(150)
     draw.text((left, y), board.route, font=route_font, fill=colors["ink"])
-    y = _s(340)
+    y = _s(360)
     if board.cities:
         draw.text((left, y), board.cities, font=stats_font, fill=colors["muted"])
         y = _s(420)
