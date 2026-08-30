@@ -19,6 +19,7 @@ from .const import (
     CONF_QUIET_ENABLED,
     CONF_QUIET_END,
     CONF_QUIET_START,
+    CONF_REFRESH_SECONDS,
     CONF_SHOW_LOGOS,
     CONF_THEME,
     CONF_TIME_FORMAT,
@@ -32,10 +33,13 @@ from .const import (
     DEFAULT_QUIET_ENABLED,
     DEFAULT_QUIET_END,
     DEFAULT_QUIET_START,
+    DEFAULT_REFRESH_SECONDS,
     DEFAULT_SHOW_LOGOS,
     DEFAULT_THEME,
     DEFAULT_TIME_FORMAT,
     DEFAULT_UNITS,
+    MAX_REFRESH_SECONDS,
+    MIN_REFRESH_SECONDS,
     DISPLAY_IMAGE,
     DISPLAY_LIVE,
     DOMAIN,
@@ -214,6 +218,20 @@ def _options_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                 default=defaults.get(CONF_SHOW_LOGOS, DEFAULT_SHOW_LOGOS),
             ): bool,
             vol.Required(
+                CONF_REFRESH_SECONDS,
+                default=defaults.get(CONF_REFRESH_SECONDS, DEFAULT_REFRESH_SECONDS),
+            ): selector(
+                {
+                    "number": {
+                        "min": MIN_REFRESH_SECONDS,
+                        "max": MAX_REFRESH_SECONDS,
+                        "step": 5,
+                        "unit_of_measurement": "s",
+                        "mode": "box",
+                    }
+                }
+            ),
+            vol.Required(
                 CONF_QUIET_ENABLED,
                 default=defaults.get(CONF_QUIET_ENABLED, DEFAULT_QUIET_ENABLED),
             ): bool,
@@ -302,6 +320,7 @@ def _store(
         CONF_QUIET_ENABLED: DEFAULT_QUIET_ENABLED,
         CONF_QUIET_START: DEFAULT_QUIET_START,
         CONF_QUIET_END: DEFAULT_QUIET_END,
+        CONF_REFRESH_SECONDS: DEFAULT_REFRESH_SECONDS,
         CONF_ADSB_URL: "",
     }
     if existing:

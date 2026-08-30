@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Refresh the static TV image on a configurable interval (default 20 seconds)
+  while Cast is showing the board
+- Waiting-for-traffic board shows the last aircraft with airline, cities,
+  type, and the same detail lines as a live overhead
+
 ## 1.10.1
 
 - Add HACS and hassfest GitHub Actions so the repository can be submitted

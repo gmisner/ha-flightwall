@@ -137,65 +137,30 @@ class BoardCopy:
         return asdict(self)
 
 
-def build_board(
-    flight: dict[str, Any] | None,
-    now: datetime | None = None,
-    units: str = "imperial",
-    last_flight: dict[str, Any] | None = None,
-    last_seen: datetime | None = None,
-    next_flight: dict[str, Any] | None = None,
-    time_format: str = TIME_FOLLOW_UNITS,
-    show_logos: bool = True,
-) -> BoardCopy:
-    now = now or datetime.now(UTC)
-    date = f"{now.strftime('%a')} {now.day} {now.strftime('%b')}".upper()
-    clock = clock_text(now, units, time_format)
-    if not flight:
-        last_line = ""
-        last_ago = ""
-        if last_flight:
-            callsign = clean(last_flight.get("callsign")) or clean(
-                last_flight.get("aircraft_registration"), "LAST FLIGHT"
-            )
-            route = route_of(last_flight)
-            last_line = callsign if callsign == route else f"{callsign}  {route}"
-            if last_seen is not None:
-                elapsed = int((now - last_seen).total_seconds())
-                last_ago = "JUST NOW" if elapsed < 60 else f"{ago(elapsed)} AGO"
-        return BoardCopy(
-            has_flight=False,
-            title="",
-            route="",
-            cities="",
-            details="",
-            departed="",
-            arriving="",
-            stats="",
-            progress=0,
-            next_line="",
-            date=date,
-            clock=clock,
-            last_label="LAST OVERHEAD" if last_line else "",
-            last_line=last_line,
-            last_ago=last_ago,
-            logo_iata="",
-            show_logos=False,
-            flap_rows=[
-                ("STATUS", "WAITING"),
-                ("TIME", clock),
-                ("DATE", date),
-                ("LAST", last_line),
-                ("SEEN", last_ago),
-            ],
-        )
-
-    callsign = clean(flight.get("callsign")) or clean(
-        flight.get("aircraft_registration"), "IN FLIGHT"
-    )
+def _airline_name(flight: dict[str, Any]) -> str:
     airline = clean(flight.get("airline_short")) or clean(flight.get("airline"))
     if len(airline) > 22:
-        airline = airline[:21].rstrip()
-    title = f"{callsign} ({airline})" if airline else callsign
+        return airline[:21].rstrip()
+    return airline
+
+
+def _callsign(flight: dict[str, Any], fallback: str = "IN FLIGHT") -> str:
+    return clean(flight.get("callsign")) or clean(
+        flight.get("aircraft_registration"), fallback
+    )
+
+
+def describe_flight(
+    flight: dict[str, Any],
+    now: datetime,
+    units: str,
+    *,
+    next_flight: dict[str, Any] | None = None,
+    show_logos: bool = True,
+) -> dict[str, Any]:
+    """Shared title, route, cities, and times for the live and last-overhead boards."""
+    callsign = _callsign(flight)
+    airline = _airline_name(flight)
     model = clean(flight.get("aircraft_model")) or clean(flight.get("aircraft_code"))
     registration = clean(flight.get("aircraft_registration")).upper()
     direction = heading_label(flight)
@@ -224,15 +189,13 @@ def build_board(
 
     next_line = ""
     if next_flight:
-        next_callsign = clean(next_flight.get("callsign")) or clean(
-            next_flight.get("aircraft_registration")
-        )
+        next_callsign = _callsign(next_flight, "")
         if next_callsign:
-            route = route_of(next_flight)
+            nxt_route = route_of(next_flight)
             next_line = (
                 f"NEXT  {next_callsign}"
-                if next_callsign == route
-                else f"NEXT  {next_callsign}  {route}"
+                if next_callsign == nxt_route
+                else f"NEXT  {next_callsign}  {nxt_route}"
             )
 
     stats = format_stats(flight, units)
@@ -241,32 +204,136 @@ def build_board(
     if " IN " in arriving:
         estimated = arriving[arriving.rfind(" IN ") + 1 :].strip()
     dest = dest_city or clean(flight.get("airport_destination_code_iata"))
+    route = route_of(flight)
+    return {
+        "callsign": callsign,
+        "airline": airline,
+        "title": f"{callsign} ({airline})".upper() if airline else callsign.upper(),
+        "route": route,
+        "cities": cities_of(flight),
+        "details": details,
+        "departed": departed,
+        "arriving": arriving,
+        "stats": stats,
+        "progress": progress_of(flight, now),
+        "next_line": next_line,
+        "logo_iata": clean(flight.get("airline_iata")).upper() if show_logos else "",
+        "model": model,
+        "dest": dest,
+        "estimated": estimated,
+        "stat_parts": stat_parts,
+        "origin_city": origin_city,
+        "dest_city": dest_city,
+    }
 
+
+def build_board(
+    flight: dict[str, Any] | None,
+    now: datetime | None = None,
+    units: str = "imperial",
+    last_flight: dict[str, Any] | None = None,
+    last_seen: datetime | None = None,
+    next_flight: dict[str, Any] | None = None,
+    time_format: str = TIME_FOLLOW_UNITS,
+    show_logos: bool = True,
+) -> BoardCopy:
+    now = now or datetime.now(UTC)
+    date = f"{now.strftime('%a')} {now.day} {now.strftime('%b')}".upper()
+    clock = clock_text(now, units, time_format)
+    if not flight:
+        last_line = ""
+        last_ago = ""
+        last_label = ""
+        shown: dict[str, Any] = {}
+        if last_flight:
+            shown = describe_flight(
+                last_flight, now, units, show_logos=show_logos
+            )
+            last_line = (
+                shown["callsign"]
+                if shown["callsign"] == shown["route"]
+                else f"{shown['callsign']}  {shown['route']}"
+            )
+            last_label = "LAST OVERHEAD"
+            if last_seen is not None:
+                elapsed = int((now - last_seen).total_seconds())
+                last_ago = "JUST NOW" if elapsed < 60 else f"{ago(elapsed)} AGO"
+            shown["next_line"] = (
+                f"{last_label}  {last_ago}".strip() if last_ago else last_label
+            )
+        origin = clip(clean(shown.get("origin_city")).upper(), 16)
+        dest = clip(clean(shown.get("dest_city")).upper(), 16)
+        flap_rows = (
+            [
+                ("STATUS", "WAITING"),
+                ("FLIGHT", shown.get("callsign", "")),
+                ("AIRLINE", shown.get("airline", "")),
+                ("ROUTE", shown.get("route", "")),
+                ("FROM", origin),
+                ("TO", dest),
+                ("AIRCRAFT", shown.get("model", "")),
+                ("SEEN", last_ago),
+            ]
+            if last_flight
+            else [
+                ("STATUS", "WAITING"),
+                ("TIME", clock),
+                ("DATE", date),
+            ]
+        )
+        return BoardCopy(
+            has_flight=False,
+            title=shown.get("title", ""),
+            route=shown.get("route", ""),
+            cities=shown.get("cities", ""),
+            details=shown.get("details", ""),
+            departed=shown.get("departed", ""),
+            arriving=shown.get("arriving", ""),
+            stats=shown.get("stats", ""),
+            progress=int(shown.get("progress") or 0),
+            next_line=shown.get("next_line", ""),
+            date=date,
+            clock=clock,
+            last_label=last_label,
+            last_line=last_line,
+            last_ago=last_ago,
+            logo_iata=shown.get("logo_iata", ""),
+            show_logos=bool(last_flight) and show_logos,
+            flap_rows=flap_rows,
+        )
+
+    shown = describe_flight(
+        flight,
+        now,
+        units,
+        next_flight=next_flight,
+        show_logos=show_logos,
+    )
     return BoardCopy(
         has_flight=True,
-        title=title.upper(),
-        route=route_of(flight),
-        cities=cities_of(flight),
-        details=details,
-        departed=departed,
-        arriving=arriving,
-        stats=stats,
-        progress=progress_of(flight, now),
-        next_line=next_line,
+        title=shown["title"],
+        route=shown["route"],
+        cities=shown["cities"],
+        details=shown["details"],
+        departed=shown["departed"],
+        arriving=shown["arriving"],
+        stats=shown["stats"],
+        progress=shown["progress"],
+        next_line=shown["next_line"],
         date=date,
         clock=clock,
         last_label="",
         last_line="",
         last_ago="",
-        logo_iata=clean(flight.get("airline_iata")).upper() if show_logos else "",
+        logo_iata=shown["logo_iata"],
         show_logos=show_logos,
         flap_rows=[
-            ("FLIGHT", callsign),
-            ("AIRCRAFT", model),
-            ("AIRLINE", airline),
-            ("TO", dest),
-            ("ESTIMATED", estimated),
-            ("ALTITUDE", stat_parts[0] if stat_parts else ""),
-            ("AIRSPEED", stat_parts[1] if len(stat_parts) > 1 else ""),
+            ("FLIGHT", shown["callsign"]),
+            ("AIRCRAFT", shown["model"]),
+            ("AIRLINE", shown["airline"]),
+            ("TO", shown["dest"]),
+            ("ESTIMATED", shown["estimated"]),
+            ("ALTITUDE", shown["stat_parts"][0] if shown["stat_parts"] else ""),
+            ("AIRSPEED", shown["stat_parts"][1] if len(shown["stat_parts"]) > 1 else ""),
         ],
     )
