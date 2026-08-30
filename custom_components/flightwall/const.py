@@ -10,6 +10,8 @@ CONF_TV_POWER = "tv_power"
 CONF_TV_PLAYER = "tv_player"
 CONF_UNITS = "units"
 CONF_BOARD_STYLE = "board_style"
+CONF_THEME = "theme"
+CONF_DISPLAY_MODE = "display_mode"
 
 UNIT_IMPERIAL = "imperial"
 UNIT_METRIC = "metric"
@@ -17,7 +19,19 @@ DEFAULT_UNITS = UNIT_IMPERIAL
 
 STYLE_LED = "led"
 STYLE_PLAIN = "plain"
+STYLE_AMBER = "amber"
 DEFAULT_BOARD_STYLE = STYLE_LED
+DEFAULT_THEME = STYLE_LED
+
+DISPLAY_IMAGE = "image"
+DISPLAY_LIVE = "live"
+DEFAULT_DISPLAY_MODE = DISPLAY_IMAGE
+
+THEME_HA = {
+    STYLE_LED: "flightwall",
+    STYLE_PLAIN: "flightwall-plain",
+    STYLE_AMBER: "flightwall-amber",
+}
 
 MIN_ALTITUDE_FT = 500
 INBOUND_DELAY_OFF = timedelta(minutes=2)

@@ -61,4 +61,8 @@ class FlightwallFlightSensor(SensorEntity):
             "flight": self._runtime.flight,
             "next_flight": self._runtime.next_flight,
             "last_flight": self._runtime.last_flight,
+            "board": self._runtime.board,
+            "units": self._runtime.units,
+            "theme": self._runtime.board_style,
+            "display_mode": self._runtime.display_mode,
         }

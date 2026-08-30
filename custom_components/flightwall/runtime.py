@@ -20,25 +20,33 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.helpers.network import get_url
 
+from .board_copy import build_board
 from .board_image import write_board_png
 from .const import (
     BOARD_PNG_NAME,
     CONF_BOARD_STYLE,
+    CONF_DISPLAY_MODE,
     CONF_FLIGHTS_ENTITY,
+    CONF_THEME,
     CONF_TV_PLAYER,
     CONF_TV_POWER,
     CONF_UNITS,
-    DEFAULT_BOARD_STYLE,
+    DASHBOARD_PATH,
+    DEFAULT_DISPLAY_MODE,
     DEFAULT_FLIGHTS_ENTITY,
+    DEFAULT_THEME,
     DEFAULT_UNITS,
+    DISPLAY_LIVE,
     INBOUND_DELAY_OFF,
     MIN_ALTITUDE_FT,
+    THEME_HA,
     TV_CAST_SOURCE,
     TV_CAST_SOURCES,
     TV_IDLE_SOURCES,
     TV_KEEPALIVE,
     TV_POWER_ON_DELAY,
     TV_TAKEOVER_REASONS,
+    VIEW_PATH,
 )
 from .flight import callsign_of, rank_flights
 
@@ -60,6 +68,7 @@ class FlightwallRuntime:
         self.last_seen: datetime | None = None
         self.inbound = False
         self.tv_enabled = False
+        self._live_failed = False
         self._listeners: list[Callable[[], None]] = []
         self._unsubs: list[CALLBACK_TYPE] = []
         self._inbound_unsub: CALLBACK_TYPE | None = None
@@ -83,7 +92,28 @@ class FlightwallRuntime:
 
     @property
     def board_style(self) -> str:
-        return self.entry.data.get(CONF_BOARD_STYLE, DEFAULT_BOARD_STYLE)
+        return self.entry.data.get(CONF_THEME) or self.entry.data.get(
+            CONF_BOARD_STYLE, DEFAULT_THEME
+        )
+
+    @property
+    def display_mode(self) -> str:
+        return self.entry.data.get(CONF_DISPLAY_MODE, DEFAULT_DISPLAY_MODE)
+
+    @property
+    def ha_theme(self) -> str:
+        return THEME_HA.get(self.board_style, THEME_HA[DEFAULT_THEME])
+
+    @property
+    def board(self) -> dict[str, Any]:
+        return build_board(
+            self.flight,
+            now=self._local_now(),
+            units=self.units,
+            last_flight=self.last_flight if self.flight is None else None,
+            last_seen=self.last_seen if self.flight is None else None,
+            next_flight=self.next_flight,
+        ).as_dict()
 
     def async_add_listener(self, update: Callable[[], None]) -> Callable[[], None]:
         self._listeners.append(update)
@@ -138,10 +168,12 @@ class FlightwallRuntime:
         new = event.data.get("new_state")
         if new is None or new.state in OFF_STATES:
             return
+        self._live_failed = False
         self.hass.add_job(self.async_cast(reason="tv_on", delay=True))
 
     @callback
     def _keepalive(self, _now: datetime) -> None:
+        self._notify()
         self.hass.add_job(self.async_cast(reason="keep"))
 
     def _local_now(self) -> datetime:
@@ -213,7 +245,18 @@ class FlightwallRuntime:
         if BOARD_PNG_NAME in content:
             return True
         app = str(player.attributes.get("app_name") or "").lower()
-        return "default media receiver" in app
+        if "default media receiver" in app:
+            return True
+        return self._player_showing_live()
+
+    def _player_showing_live(self) -> bool:
+        if not self.tv_player:
+            return False
+        player = self.hass.states.get(self.tv_player)
+        if player is None:
+            return False
+        app = str(player.attributes.get("app_name") or "").lower()
+        return "home assistant" in app or "lovelace" in app
 
     def _tv_showing_board(self) -> bool:
         """True when this set is already on Cast / our image."""
@@ -247,8 +290,57 @@ class FlightwallRuntime:
         base = get_url(self.hass, prefer_external=False, allow_internal=True)
         return f"{base.rstrip('/')}/local/{BOARD_PNG_NAME}?t={int(datetime.now().timestamp())}"
 
+    async def _write_board_image(self) -> None:
+        await self.hass.async_add_executor_job(
+            write_board_png,
+            self._board_path(),
+            self.flight,
+            self.units,
+            self._local_now(),
+            self.board_style,
+            self.last_flight if self.flight is None else None,
+            self.last_seen if self.flight is None else None,
+            self.next_flight,
+        )
+
+    async def _select_cast_source(self, reason: str) -> None:
+        if self.tv_power and (
+            reason in TV_TAKEOVER_REASONS or self._tv_source() in TV_IDLE_SOURCES
+        ):
+            await self.hass.services.async_call(
+                "media_player",
+                "select_source",
+                {"entity_id": self.tv_power, "source": TV_CAST_SOURCE},
+                blocking=False,
+            )
+            await asyncio.sleep(1.5)
+
+    async def _play_board_image(self) -> None:
+        await self.hass.services.async_call(
+            "media_player",
+            "play_media",
+            {
+                "entity_id": self.tv_player,
+                "media_content_id": self._board_url(),
+                "media_content_type": "image/png",
+            },
+            blocking=False,
+        )
+
+    async def _cast_live_view(self) -> None:
+        await self.hass.services.async_call(
+            "cast",
+            "show_lovelace_view",
+            {
+                "entity_id": self.tv_player,
+                "dashboard_path": DASHBOARD_PATH,
+                "view_path": VIEW_PATH,
+            },
+            blocking=False,
+        )
+
     async def async_cast(self, reason: str, delay: bool = False) -> None:
-        """Show the board image on the guest-room Chromecast."""
+        """Show the board on the guest-room Chromecast."""
         if not self.tv_enabled or not self.tv_player:
             return
         if reason != "armed" and not self._tv_is_on():
@@ -271,37 +363,25 @@ class FlightwallRuntime:
             return
 
         try:
-            await self.hass.async_add_executor_job(
-                write_board_png,
-                self._board_path(),
-                self.flight,
-                self.units,
-                self._local_now(),
-                self.board_style,
-                self.last_flight if self.flight is None else None,
-                self.last_seen if self.flight is None else None,
-                self.next_flight,
-            )
-            if self.tv_power and (
-                reason in TV_TAKEOVER_REASONS or self._tv_source() in TV_IDLE_SOURCES
-            ):
-                await self.hass.services.async_call(
-                    "media_player",
-                    "select_source",
-                    {"entity_id": self.tv_power, "source": TV_CAST_SOURCE},
-                    blocking=False,
-                )
-                await asyncio.sleep(1.5)
-            await self.hass.services.async_call(
-                "media_player",
-                "play_media",
-                {
-                    "entity_id": self.tv_player,
-                    "media_content_id": self._board_url(),
-                    "media_content_type": "image/png",
-                },
-                blocking=False,
-            )
+            await self._write_board_image()
+            await self._select_cast_source(reason)
+            use_live = self.display_mode == DISPLAY_LIVE and not self._live_failed
+            if use_live:
+                if reason in {"keep", "flight"} and self._player_showing_live():
+                    return
+                await self._cast_live_view()
+                if reason in TV_TAKEOVER_REASONS:
+                    await asyncio.sleep(8)
+                    if not self._player_showing_live():
+                        _LOGGER.warning(
+                            "Live Home Assistant Cast did not connect on %s; "
+                            "showing the board image instead",
+                            self.tv_player,
+                        )
+                        self._live_failed = True
+                        await self._play_board_image()
+                return
+            await self._play_board_image()
         except HomeAssistantError as err:
             _LOGGER.warning("Cast to %s failed (%s): %s", self.tv_player, reason, err)
         except OSError as err:

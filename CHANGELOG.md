@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.0
+
+- Configure **Display**: Image (Cast-safe) or Live dashboard (HA Cast / browser)
+- Live Cast that does not connect falls back to the board image so the TV is
+  not left blank
+- Configure **Theme**: LED night, plain large type, or amber departures
+- PNG and live Lovelace boards share the same text (cities, heading, next,
+  empty-sky clock)
+
 ## 1.7.0
 
 - TV board refreshes about once a minute (altitude, speed, clock) while Cast

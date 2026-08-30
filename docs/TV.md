@@ -31,9 +31,16 @@ If someone switches the set to Netflix or another source, Flight Wall
 does not take over again until the TV is turned off and on, or you
 re-arm the switch.
 
-Units (imperial or metric) and board style (LED grid or plain large
-type) are under **Settings → Devices & Services → Flight Wall →
-Configure**.
+**Display**, **Theme**, and **Units** are under **Settings → Devices &
+Services → Flight Wall → Configure**.
+
+- **Image** — 4K PNG over Cast. This is the path that works on a 2019
+  Vizio. The LED grid only exists in this mode.
+- **Live** — `cast.show_lovelace_view` of the Flightwall dashboard. Use
+  this on a browser, tablet, or a Chromecast that can load Home
+  Assistant. If the live session does not connect, Flight Wall falls
+  back to the image so the set is not blank.
+- **Theme** — LED night, plain large type, or amber departures.
 
 Do not also install `packages/flightwall.yaml`.
 

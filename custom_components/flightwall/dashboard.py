@@ -8,67 +8,60 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import DASHBOARD_PATH, DOMAIN
+from .const import DASHBOARD_PATH, DOMAIN, THEME_HA
 
 _LOGGER = logging.getLogger(__name__)
 
-BOARD_MARKDOWN = """{% set f = state_attr('sensor.flightwall_flight','flight') %}
-{% if f %}
-{% macro clean(v, fb) %}{% set s = v | string | trim %}{{ fb if s in ['', 'None', 'none', 'null', 'N/A'] else s }}{% endmacro %}
-{% set org = clean(f.airport_origin_code_iata, '') | trim %}
-{% set dst = clean(f.airport_destination_code_iata, '') | trim %}
-{% set orgc = clean(f.airport_origin_city, '') | trim %}
-{% set dstc = clean(f.airport_destination_city, '') | trim %}
-{% set iata = clean(f.airline_iata, '') | trim %}
-{% set airline = clean(f.airline_short, '') | trim %}
-{% set airlinel = clean(f.airline, '') | trim %}
-{% set model = clean(f.aircraft_model, '') | trim %}
-{% set code = clean(f.aircraft_code, '') | trim %}
-{% set cs = clean(f.callsign, '') | trim %}
-{% set reg = clean(f.aircraft_registration, '') | trim %}
-{% set dep = (f.time_real_departure | default(0) | int(0)) or (f.time_scheduled_departure | default(0) | int(0)) %}
-{% set arr = (f.time_estimated_arrival | default(0) | int(0)) or (f.time_scheduled_arrival | default(0) | int(0)) %}
-{% set nw = as_timestamp(now()) | int %}
-{% set d = nw - dep %}
-{% set a = arr - nw %}
-{% set prog = ([[(((nw - dep) / ([arr - dep, 1] | max)) * 32) | round(0) | int, 0] | max, 32] | min) if (arr > dep and dep > 0) else 0 %}
-{% set alraw = airline if airline else airlinel %}
-{% set al = alraw | truncate(22, true, '') | trim %}
-![](https://images.kiwi.com/airlines/128/{{ iata | upper if iata else 'non-existing' }}.png)
+BOARD_MARKDOWN = """{% set b = state_attr('sensor.flightwall_flight','board') or {} %}
+{% if b.has_flight %}
+{% if b.logo_iata %}![](https://images.kiwi.com/airlines/128/{{ b.logo_iata }}.png){% endif %}
 
-## {{ cs if cs else reg }}{% if al %} ({{ al }}){% endif %}
+## {{ b.title }}
 
-# {% if org and dst %}{{ org }}-{{ dst }}{% elif reg %}{{ reg }}{% else %}IN FLIGHT{% endif %}
+# {{ b.route }}
 
-### {{ model if model else code }}
+### {{ b.cities }}
 
-{% if dep > 0 and d > 0 %}DEPARTED {% if orgc %}{{ orgc }} {% endif %}{% if d >= 3600 %}{{ d // 3600 }}H {{ (d % 3600) // 60 }}M{% else %}{{ d // 60 }}M{% endif %} AGO{% else %}IN FLIGHT{% endif %}
+{{ b.details }}
 
-{% if a > 0 %}ARRIVING {% if dstc %}{{ dstc }} {% endif %}IN {% if a >= 3600 %}{{ a // 3600 }}H {{ (a % 3600) // 60 }}M{% else %}{{ a // 60 }}M{% endif %}{% else %}EN ROUTE{% endif %}
+{{ b.departed }}
 
-{% if f.altitude is defined %}{{ "{:,}".format(f.altitude | int) | replace(",", ".") }} FT{% if f.ground_speed is defined %} · {{ f.ground_speed | int }} KT{% endif %}{% if f.distance is defined %} · {{ f.distance | round(1) }} KM{% endif %}{% endif %}
+{{ b.arriving }}
 
-{{ '█' * prog }}{{ '░' * (32 - prog) }}
+{{ b.stats }}
+
+{{ '█' * (b.progress | int(0)) }}{{ '░' * (32 - (b.progress | int(0))) }}
+
+{{ b.next_line }}
 {% else %}
+## {{ b.date }}
 
-# —
+# {{ b.clock }}
 
-## WAITING FOR TRAFFIC
+### WAITING FOR TRAFFIC
+
+{{ b.last_label }}
+
+{{ b.last_line }}
+
+{{ b.last_ago }}
 {% endif %}
 """
 
-DASHBOARD_CONFIG: dict[str, Any] = {
-    "title": "Flightwall",
-    "views": [
-        {
-            "title": "Board",
-            "path": "board",
-            "theme": "flightwall",
-            "type": "masonry",
-            "cards": [{"type": "markdown", "content": BOARD_MARKDOWN}],
-        }
-    ],
-}
+
+def _dashboard_config(theme: str) -> dict[str, Any]:
+    return {
+        "title": "Flightwall",
+        "views": [
+            {
+                "title": "Board",
+                "path": "board",
+                "theme": theme,
+                "type": "masonry",
+                "cards": [{"type": "markdown", "content": BOARD_MARKDOWN}],
+            }
+        ],
+    }
 
 
 def _lovelace_data(hass: HomeAssistant) -> Any:
@@ -104,7 +97,9 @@ def _register_sidebar(hass: HomeAssistant) -> None:
     frontend.async_register_built_in_panel(hass, "lovelace", **kwargs)
 
 
-async def async_ensure_dashboard(hass: HomeAssistant) -> None:
+async def async_ensure_dashboard(
+    hass: HomeAssistant, theme: str | None = None
+) -> None:
     """Create or refresh the flight-wall storage dashboard."""
     ll = _lovelace_data(hass)
     dashboards = getattr(ll, "dashboards", None) if ll is not None else None
@@ -157,7 +152,7 @@ async def async_ensure_dashboard(hass: HomeAssistant) -> None:
     if save is None:
         return
     try:
-        await save(DASHBOARD_CONFIG)
+        await save(_dashboard_config(theme or THEME_HA["led"]))
     except HomeAssistantError as err:
         _LOGGER.warning("Could not save the Flightwall dashboard: %s", err)
         return
@@ -191,6 +186,40 @@ async def async_write_theme(hass: HomeAssistant) -> None:
   ha-card-border-radius: 0px
   ha-card-box-shadow: "none"
   lovelace-background: "#000000"
+
+flightwall-plain:
+  primary-color: "#7ea6ff"
+  accent-color: "#35ff7a"
+  primary-background-color: "#000000"
+  secondary-background-color: "#000000"
+  card-background-color: "#000000"
+  primary-text-color: "#ffffff"
+  secondary-text-color: "#9fb8e8"
+  text-primary-color: "#ffffff"
+  app-header-background-color: "#000000"
+  app-header-text-color: "#ffffff"
+  ha-card-background: "#000000"
+  ha-card-border-width: 0px
+  ha-card-border-radius: 0px
+  ha-card-box-shadow: "none"
+  lovelace-background: "#000000"
+
+flightwall-amber:
+  primary-color: "#ffb84a"
+  accent-color: "#ff9f1a"
+  primary-background-color: "#0a0804"
+  secondary-background-color: "#0a0804"
+  card-background-color: "#0a0804"
+  primary-text-color: "#ffb84a"
+  secondary-text-color: "#c9893a"
+  text-primary-color: "#ffb84a"
+  app-header-background-color: "#0a0804"
+  app-header-text-color: "#ffb84a"
+  ha-card-background: "#0a0804"
+  ha-card-border-width: 0px
+  ha-card-border-radius: 0px
+  ha-card-box-shadow: "none"
+  lovelace-background: "#0a0804"
 """,
             encoding="utf-8",
         )

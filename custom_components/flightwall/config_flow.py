@@ -12,15 +12,21 @@ from homeassistant.helpers.selector import selector
 
 from .const import (
     CONF_BOARD_STYLE,
+    CONF_DISPLAY_MODE,
     CONF_FLIGHTS_ENTITY,
+    CONF_THEME,
     CONF_TV_ENABLED,
     CONF_TV_PLAYER,
     CONF_TV_POWER,
     CONF_UNITS,
-    DEFAULT_BOARD_STYLE,
+    DEFAULT_DISPLAY_MODE,
     DEFAULT_FLIGHTS_ENTITY,
+    DEFAULT_THEME,
     DEFAULT_UNITS,
+    DISPLAY_IMAGE,
+    DISPLAY_LIVE,
     DOMAIN,
+    STYLE_AMBER,
     STYLE_LED,
     STYLE_PLAIN,
     UNIT_IMPERIAL,
@@ -69,19 +75,44 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                 }
             ),
             vol.Required(
-                CONF_BOARD_STYLE,
-                default=defaults.get(CONF_BOARD_STYLE, DEFAULT_BOARD_STYLE),
+                CONF_DISPLAY_MODE,
+                default=defaults.get(CONF_DISPLAY_MODE, DEFAULT_DISPLAY_MODE),
+            ): selector(
+                {
+                    "select": {
+                        "options": [
+                            {
+                                "value": DISPLAY_IMAGE,
+                                "label": "Image (Cast-safe, Vizio / old Chromecast)",
+                            },
+                            {
+                                "value": DISPLAY_LIVE,
+                                "label": "Live dashboard (browser / HA Cast)",
+                            },
+                        ],
+                        "mode": "dropdown",
+                    }
+                }
+            ),
+            vol.Required(
+                CONF_THEME,
+                default=defaults.get(CONF_THEME)
+                or defaults.get(CONF_BOARD_STYLE, DEFAULT_THEME),
             ): selector(
                 {
                     "select": {
                         "options": [
                             {
                                 "value": STYLE_LED,
-                                "label": "LED grid",
+                                "label": "LED night",
                             },
                             {
                                 "value": STYLE_PLAIN,
                                 "label": "Plain large type",
+                            },
+                            {
+                                "value": STYLE_AMBER,
+                                "label": "Amber departures",
                             },
                         ],
                         "mode": "dropdown",
@@ -107,7 +138,7 @@ class FlightwallConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             errors = _validate(user_input)
             if not errors:
-                return self.async_create_entry(title="Flight Wall", data=user_input)
+                return self.async_create_entry(title="Flight Wall", data=_store(user_input))
 
         return self.async_show_form(
             step_id="user",
@@ -135,7 +166,7 @@ class FlightwallOptionsFlow(OptionsFlow):
             errors = _validate(user_input)
             if not errors:
                 self.hass.config_entries.async_update_entry(
-                    self._config_entry, data=user_input
+                    self._config_entry, data=_store(user_input)
                 )
                 return self.async_create_entry(title="", data={})
 
@@ -144,6 +175,14 @@ class FlightwallOptionsFlow(OptionsFlow):
             data_schema=_schema(dict(self._config_entry.data)),
             errors=errors,
         )
+
+
+def _store(user_input: dict[str, Any]) -> dict[str, Any]:
+    data = dict(user_input)
+    theme = data.get(CONF_THEME) or data.get(CONF_BOARD_STYLE, DEFAULT_THEME)
+    data[CONF_THEME] = theme
+    data[CONF_BOARD_STYLE] = theme
+    return data
 
 
 def _validate(user_input: dict[str, Any]) -> dict[str, str]:

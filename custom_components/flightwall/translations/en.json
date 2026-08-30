@@ -10,7 +10,8 @@
           "tv_power": "TV power (Vizio)",
           "tv_player": "Chromecast on that TV",
           "units": "Units",
-          "board_style": "Board style"
+          "display_mode": "Display",
+          "theme": "Theme"
         }
       }
     },
@@ -25,14 +26,15 @@
     "step": {
       "init": {
         "title": "Flight Wall",
-        "description": "Update the Flightradar24 sensor, guest-room TV, units, or board style.",
+        "description": "Image mode is for a Vizio or old Chromecast. Live mode is for a browser, tablet, or Chromecast that can load Home Assistant.",
         "data": {
           "flights_entity": "Flights in area sensor",
           "tv_enabled": "This room's TV is a flight board",
           "tv_power": "TV power (Vizio)",
           "tv_player": "Chromecast on that TV",
           "units": "Units",
-          "board_style": "Board style"
+          "display_mode": "Display",
+          "theme": "Theme"
         }
       }
     },

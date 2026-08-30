@@ -100,8 +100,11 @@ also copy `packages/flightwall.yaml` — you would get duplicate entities.
    the TV on with the remote takes over Cast. If they then switch to
    another app, Flight Wall stays out of the way until the set is turned
    off and on again, or you re-arm the switch.
-7. Units and board style (LED grid or plain large type) are under
+7. **Display**, **Theme**, and **Units** are under
    **Settings → Devices & Services → Flight Wall → Configure**.
+   Use **Image** on a 2019 Vizio or old Chromecast. Use **Live** on a
+   tablet, Fully Kiosk, or a Chromecast that can load Home Assistant.
+   If live Cast fails, the board image is shown instead.
 
 The integration creates `sensor.flightwall_flight`, the inbound binary
 sensor, the TV switch, and a **Flightwall** sidebar dashboard. Turning the
