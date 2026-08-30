@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.10.1
+
+- Add HACS and hassfest GitHub Actions so the repository can be submitted
+  to the default HACS store
+
 ## 1.10.0
 
 - Add pytest coverage for flight ranking and board text, plus a GitHub Actions check

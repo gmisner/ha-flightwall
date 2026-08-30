@@ -11,16 +11,18 @@ https://www.hacs.xyz/docs/publish/include/
 
 ## Checklist before submitting
 
-- [ ] Latest release is tagged (currently **1.10.0** after these PRs merge)
-- [ ] `hacs.json` has `"render_readme": true`
-- [ ] README install steps work on a clean Home Assistant
-- [ ] `manifest.json` `version` matches the git tag
-- [ ] Theme preview images in `docs/images/tv-*.png` are current
+- [x] Latest release is tagged (**1.10.1**, after HACS and hassfest passed)
+- [x] `hacs.json` has `"render_readme": true`
+- [x] README install steps work on a clean Home Assistant
+- [x] `manifest.json` `version` matches the git tag
+- [x] Theme preview images in `docs/images/tv-*.png` are current
   (`python scripts/render_previews.py` from a venv with Pillow)
 - [x] Brand images in `custom_components/flightwall/brand/` (`icon.png`, `logo.png`)
-- [ ] GitHub social preview set to `docs/images/social.png`
+- [x] GitHub social preview set to `docs/images/social.png`
   (repo Settings → General → Social preview)
-- [ ] No household-specific names in docs or config-flow copy
+- [x] No household-specific names in docs or config-flow copy
+- [x] HACS Action and hassfest pass with no `ignore` keys
+- [ ] Pull request open against [hacs/default](https://github.com/hacs/default)
 
 ## What reviewers will look at
 
