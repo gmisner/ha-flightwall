@@ -94,7 +94,6 @@ def _register_sidebar(hass: HomeAssistant) -> None:
     kwargs: dict[str, Any] = {
         "frontend_url_path": DASHBOARD_PATH,
         "require_admin": False,
-        "show_in_sidebar": True,
         "sidebar_title": "Flightwall",
         "sidebar_icon": "mdi:airplane",
         "config": {"mode": "storage"},
@@ -150,7 +149,7 @@ async def async_ensure_dashboard(hass: HomeAssistant) -> None:
 
     try:
         _register_sidebar(hass)
-    except ValueError as err:
+    except (ValueError, TypeError) as err:
         _LOGGER.debug("Sidebar panel already registered: %s", err)
 
     dash = dashboards[DASHBOARD_PATH]

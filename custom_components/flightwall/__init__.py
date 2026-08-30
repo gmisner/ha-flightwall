@@ -25,8 +25,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data = runtime
 
     await runtime.async_setup()
-    await async_write_theme(hass)
-    await async_ensure_dashboard(hass)
+    try:
+        await async_write_theme(hass)
+        await async_ensure_dashboard(hass)
+    except Exception:
+        _LOGGER.exception("Flight Wall dashboard setup failed; TV path still loads")
     if not hass.is_running:
 
         async def _started(_event: Event) -> None:

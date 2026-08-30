@@ -13,6 +13,8 @@ MIN_ALTITUDE_FT = 500
 INBOUND_DELAY_OFF = timedelta(minutes=2)
 TV_POWER_ON_DELAY = timedelta(seconds=10)
 TV_KEEPALIVE = timedelta(minutes=3)
+TV_CAST_SOURCE = "Cast"
+BOARD_PNG_NAME = "flightwall-board.png"
 
 DASHBOARD_PATH = "flight-wall"
 VIEW_PATH = "board"

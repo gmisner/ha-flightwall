@@ -1,10 +1,12 @@
-"""Shared runtime: flight ranking plus guest-room TV Cast."""
+"""Shared runtime: flight ranking plus guest-room TV image Cast."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Callable
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -15,18 +17,20 @@ from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_interval,
 )
+from homeassistant.helpers.network import get_url
 
+from .board_image import write_board_png
 from .const import (
+    BOARD_PNG_NAME,
     CONF_FLIGHTS_ENTITY,
     CONF_TV_PLAYER,
     CONF_TV_POWER,
-    DASHBOARD_PATH,
     DEFAULT_FLIGHTS_ENTITY,
     INBOUND_DELAY_OFF,
     MIN_ALTITUDE_FT,
+    TV_CAST_SOURCE,
     TV_KEEPALIVE,
     TV_POWER_ON_DELAY,
-    VIEW_PATH,
 )
 from .flight import callsign_of, pick_best_flight
 
@@ -108,18 +112,18 @@ class FlightwallRuntime:
         previous = self.callsign
         self._refresh_flight()
         if self.callsign != previous:
-            self.hass.async_create_task(self.async_cast(reason="flight"))
+            self.hass.add_job(self.async_cast(reason="flight"))
 
     @callback
     def _tv_power_changed(self, event: Event) -> None:
         new = event.data.get("new_state")
         if new is None or new.state in OFF_STATES:
             return
-        self.hass.async_create_task(self.async_cast(reason="tv_on", delay=True))
+        self.hass.add_job(self.async_cast(reason="tv_on", delay=True))
 
     @callback
     def _keepalive(self, _now: datetime) -> None:
-        self.hass.async_create_task(self.async_cast(reason="keep"))
+        self.hass.add_job(self.async_cast(reason="keep"))
 
     def _refresh_flight(self) -> None:
         state = self.hass.states.get(self.flights_entity)
@@ -164,8 +168,15 @@ class FlightwallRuntime:
         if enabled:
             await self.async_cast(reason="armed")
 
+    def _board_path(self) -> Path:
+        return Path(self.hass.config.path("www")) / BOARD_PNG_NAME
+
+    def _board_url(self) -> str:
+        base = get_url(self.hass, prefer_external=False, allow_internal=True)
+        return f"{base.rstrip('/')}/local/{BOARD_PNG_NAME}?t={int(datetime.now().timestamp())}"
+
     async def async_cast(self, reason: str, delay: bool = False) -> None:
-        """Cast the board if the guest-room path is armed and the TV is on."""
+        """Show the board image on the guest-room Chromecast."""
         if not self.tv_enabled or not self.tv_player:
             return
         if reason != "armed" and not self._tv_is_on():
@@ -177,7 +188,7 @@ class FlightwallRuntime:
 
             def _go(_now: datetime) -> None:
                 self._cast_delay_unsub = None
-                self.hass.async_create_task(self.async_cast(reason="tv_on"))
+                self.hass.add_job(self.async_cast(reason="tv_on"))
 
             self._cast_delay_unsub = async_call_later(
                 self.hass, TV_POWER_ON_DELAY.total_seconds(), _go
@@ -185,15 +196,28 @@ class FlightwallRuntime:
             return
 
         try:
+            await self.hass.async_add_executor_job(
+                write_board_png, self._board_path(), self.flight
+            )
+            if self.tv_power:
+                await self.hass.services.async_call(
+                    "media_player",
+                    "select_source",
+                    {"entity_id": self.tv_power, "source": TV_CAST_SOURCE},
+                    blocking=False,
+                )
+                await asyncio.sleep(1.5)
             await self.hass.services.async_call(
-                "cast",
-                "show_lovelace_view",
+                "media_player",
+                "play_media",
                 {
                     "entity_id": self.tv_player,
-                    "dashboard_path": DASHBOARD_PATH,
-                    "view_path": VIEW_PATH,
+                    "media_content_id": self._board_url(),
+                    "media_content_type": "image/png",
                 },
                 blocking=False,
             )
         except HomeAssistantError as err:
             _LOGGER.warning("Cast to %s failed (%s): %s", self.tv_player, reason, err)
+        except OSError as err:
+            _LOGGER.warning("Could not write Flight Wall image (%s): %s", reason, err)

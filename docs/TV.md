@@ -8,10 +8,11 @@ done. Home Assistant never powers the set down.
 The tablet popup is separate. This page is only the TV.
 
 A Vizio cannot run the LED or split-flap styles. SmartCast is not a
-browser. What it *can* do is **Google Cast** a dark, large-type dashboard
-that updates live: airline mark, callsign, route, type, times, altitude,
-speed, progress. Empty sky shows `WAITING FOR TRAFFIC` until the next
-one.
+browser, and many built-in Chromecasts cannot load the live Home
+Assistant dashboard. Flight Wall switches the set to the Cast app and
+sends a full-screen board image instead: airline, callsign, route, type,
+times, altitude, speed, progress. Empty sky shows `WAITING FOR TRAFFIC`
+until the next one.
 
 AirPlay on the Vizio is manual screen mirroring from an iPhone, iPad, or
 Mac. Home Assistant cannot start AirPlay. Use it to preview. Day to day

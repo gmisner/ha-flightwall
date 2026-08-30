@@ -1,13 +1,13 @@
 {
   "domain": "flightwall",
   "name": "Flight Wall",
-  "after_dependencies": ["cast", "frontend", "lovelace"],
+  "after_dependencies": ["cast", "frontend", "lovelace", "media_player"],
   "codeowners": ["@gmisner"],
   "config_flow": true,
   "documentation": "https://github.com/gmisner/ha-flightwall",
   "integration_type": "service",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/gmisner/ha-flightwall/issues",
-  "requirements": [],
-  "version": "1.5.1"
+  "requirements": ["Pillow"],
+  "version": "1.6.0"
 }
