@@ -8,7 +8,8 @@
           "flights_entity": "Flights in area sensor",
           "tv_enabled": "This room's TV is a flight board",
           "tv_power": "TV power (Vizio)",
-          "tv_player": "Chromecast on that TV"
+          "tv_player": "Chromecast on that TV",
+          "units": "Units"
         }
       }
     },
@@ -23,12 +24,13 @@
     "step": {
       "init": {
         "title": "Flight Wall",
-        "description": "Update the Flightradar24 sensor or the guest-room TV entities.",
+        "description": "Update the Flightradar24 sensor, guest-room TV entities, or units.",
         "data": {
           "flights_entity": "Flights in area sensor",
           "tv_enabled": "This room's TV is a flight board",
           "tv_power": "TV power (Vizio)",
-          "tv_player": "Chromecast on that TV"
+          "tv_player": "Chromecast on that TV",
+          "units": "Units"
         }
       }
     },

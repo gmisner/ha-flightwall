@@ -23,7 +23,8 @@ is Cast.
 If you installed Flight Wall from HACS, skip the file copies and the TV
 automation paste. Add the integration, pick the two TV entities, leave
 `switch.flightwall_tv` on. The integration creates the dashboard and
-casts it when the TV comes on.
+casts it when the TV comes on. Units (imperial or metric) are under
+**Settings → Devices & Services → Flight Wall → Configure**.
 
 Do not also install `packages/flightwall.yaml`.
 

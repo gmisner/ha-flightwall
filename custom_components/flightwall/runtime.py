@@ -25,7 +25,9 @@ from .const import (
     CONF_FLIGHTS_ENTITY,
     CONF_TV_PLAYER,
     CONF_TV_POWER,
+    CONF_UNITS,
     DEFAULT_FLIGHTS_ENTITY,
+    DEFAULT_UNITS,
     INBOUND_DELAY_OFF,
     MIN_ALTITUDE_FT,
     TV_CAST_SOURCE,
@@ -65,6 +67,10 @@ class FlightwallRuntime:
     @property
     def tv_player(self) -> str:
         return (self.entry.data.get(CONF_TV_PLAYER) or "").strip()
+
+    @property
+    def units(self) -> str:
+        return self.entry.data.get(CONF_UNITS, DEFAULT_UNITS)
 
     def async_add_listener(self, update: Callable[[], None]) -> Callable[[], None]:
         self._listeners.append(update)
@@ -197,7 +203,7 @@ class FlightwallRuntime:
 
         try:
             await self.hass.async_add_executor_job(
-                write_board_png, self._board_path(), self.flight
+                write_board_png, self._board_path(), self.flight, self.units
             )
             if self.tv_power:
                 await self.hass.services.async_call(

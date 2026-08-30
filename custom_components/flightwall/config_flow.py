@@ -15,8 +15,12 @@ from .const import (
     CONF_TV_ENABLED,
     CONF_TV_PLAYER,
     CONF_TV_POWER,
+    CONF_UNITS,
     DEFAULT_FLIGHTS_ENTITY,
+    DEFAULT_UNITS,
     DOMAIN,
+    UNIT_IMPERIAL,
+    UNIT_METRIC,
 )
 
 
@@ -40,6 +44,26 @@ def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                 CONF_TV_PLAYER,
                 description={"suggested_value": defaults.get(CONF_TV_PLAYER, "")},
             ): selector({"entity": {"domain": "media_player"}}),
+            vol.Required(
+                CONF_UNITS,
+                default=defaults.get(CONF_UNITS, DEFAULT_UNITS),
+            ): selector(
+                {
+                    "select": {
+                        "options": [
+                            {
+                                "value": UNIT_IMPERIAL,
+                                "label": "Imperial (ft, kt, mi)",
+                            },
+                            {
+                                "value": UNIT_METRIC,
+                                "label": "Metric (m, km/h, km)",
+                            },
+                        ],
+                        "mode": "dropdown",
+                    }
+                }
+            ),
         }
     )
 

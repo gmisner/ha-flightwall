@@ -8,6 +8,11 @@ CONF_FLIGHTS_ENTITY = "flights_entity"
 CONF_TV_ENABLED = "tv_enabled"
 CONF_TV_POWER = "tv_power"
 CONF_TV_PLAYER = "tv_player"
+CONF_UNITS = "units"
+
+UNIT_IMPERIAL = "imperial"
+UNIT_METRIC = "metric"
+DEFAULT_UNITS = UNIT_IMPERIAL
 
 MIN_ALTITUDE_FT = 500
 INBOUND_DELAY_OFF = timedelta(minutes=2)
