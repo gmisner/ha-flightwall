@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Flight Wall",
-        "description": "Pick the Flightradar24 flights-in-area sensor. For a television, also pick the TV power media player and the Chromecast on that set.",
+        "description": "Pick the flights-in-area sensor. For a television, also pick the TV power media player and the Chromecast on that set. Display, theme, units, and other options are under Configure after setup.",
         "data": {
           "flights_entity": "Flights in area sensor",
           "adsb_url": "Local ADS-B aircraft.json URL (optional)",

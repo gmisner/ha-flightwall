@@ -16,6 +16,9 @@
   integration, so HACS is the only install path
 - Add TV theme previews and a HACS default-listing checklist
 - Add integration brand icon and logo for Home Assistant / HACS
+- First-run setup is only the flights sensor and TV entities; display
+  options stay under Configure. README matches the five themes and the
+  HACS tablet path
 
 ## 1.9.2
 

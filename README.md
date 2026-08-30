@@ -20,13 +20,13 @@ by physical LED flight boards, in particular
 - Shows city names, registration, heading, and a next-up flight when a
   second aircraft is in range. Empty sky shows a clock and the last
   aircraft overhead.
-- On a TV, writes a 4K board image and Casts it. On a tablet, a
-  full-screen popup can use the LED look or an animated split-flap
-  board.
+- On a TV, writes a 4K board image and Casts it. On a tablet, open the
+  Flightwall dashboard (or the animated split-flap page) in a browser
+  or Fully Kiosk.
 
 ## Themes
 
-The HACS integration (TV path) has four themes under
+The HACS integration has five themes under
 **Settings → Devices & Services → Flight Wall → Configure**:
 
 | Theme | Look |
@@ -40,9 +40,6 @@ The HACS integration (TV path) has four themes under
 Airline marks sit in a logo column. When Flightradar24 has no airline
 code, a generic aircraft mark is used so the layout stays the same.
 Split-flap has no logo — a real flap board cannot display one.
-
-The older tablet popup still switches with `input_select.flightwall_style`
-(`dot-matrix` or `split-flap`).
 
 ![Split-flap style](docs/images/split-flap.jpg)
 
@@ -69,16 +66,11 @@ the LAN as `/local/flightwall-board.png`.
 Do **not** also install `packages/flightwall.yaml` if you use HACS —
 you would get duplicate entities.
 
-### Tablet popup (optional package)
+### Tablet (same HACS install)
 
-| Component | Source | Why |
-|---|---|---|
-| [browser-mod](https://github.com/thomasloven/hass-browser_mod) | HACS | Full-screen popup |
-| [card-mod](https://github.com/thomasloven/lovelace-card-mod) | HACS | Styling |
-| [stack-in-card](https://github.com/custom-cards/stack-in-card) | HACS | Popup can only hold one card |
-
-Optional: [Fully Kiosk Browser](https://www.fully-kiosk.com/) with the
-Plus licence if Home Assistant should wake the tablet.
+A browser or [Fully Kiosk](https://www.fully-kiosk.com/) on a wall
+tablet. Open the **Flightwall** sidebar dashboard. The Plus licence is
+only needed if Home Assistant should wake the screen.
 
 ### Data source
 
@@ -116,7 +108,8 @@ logos or city-pair routes.
    set is turned off and on, you re-arm the switch, or you call
    `flightwall.recast`. Keepalive only refreshes while Cast is showing
    the board.
-6. **Display**, **Theme**, and **Units** are under
+6. **Display**, **Theme**, **Units**, clock, altitude, logos, quiet
+   hours, and an optional local ADS-B URL are under
    **Settings → Devices & Services → Flight Wall → Configure**.
 
 The first instance creates `sensor.flightwall_flight`, the inbound
@@ -142,13 +135,12 @@ airline marks, and quiet hours are on the same Configure page.
 
 Full TV notes: [docs/TV.md](docs/TV.md).
 
-### Tablet (same HACS install)
+### Tablet URL
 
-Do not install the YAML package. Open the **Flightwall** sidebar
-dashboard (or `http://YOUR_HA:8123/flight-wall/board`) in a browser or
-[Fully Kiosk](https://www.fully-kiosk.com/) on the tablet. Use Display
-→ Live if you want that dashboard on a Chromecast that can load Home
-Assistant.
+Do not install the YAML package. Open
+`http://YOUR_HA:8123/flight-wall/board` in a browser or Fully Kiosk.
+Use Display → Live if you want that dashboard on a Chromecast that can
+load Home Assistant.
 
 The integration copies the animated split-flap page to
 `/local/flightwall/splitflap.html` on setup. Open that URL for the
@@ -162,16 +154,14 @@ stack and do not want the HACS integration. Do not run both.
 
 ## Configuration
 
-HACS options live in the integration Configure dialog. Tablet popup
-behaviour is documented in [docs/CUSTOMISATION.md](docs/CUSTOMISATION.md).
+HACS options live in the integration Configure dialog. See
+[docs/CUSTOMISATION.md](docs/CUSTOMISATION.md).
 
 | What | Where | Default |
 |---|---|---|
-| Display, theme, units | Integration → Configure | Image, LED night, imperial |
-| TV is a flight board | `switch.flightwall_tv` (HACS) or `input_boolean.flightwall_tv` | on after setup / off until setup |
-| Quiet hours (tablet) | `condition: time` in the popup automation | 07:00–22:00 |
-| How long the popup stays | `timeout` in the popup automation | 60000 ms |
-| How long after the last aircraft | `delay_off` on the inbound binary sensor | 2 minutes |
+| Display, theme, units, clock, logos, quiet hours, ADS-B | Integration → Configure | Image, LED night, imperial |
+| TV is a flight board | `switch.flightwall_tv` | on after setup |
+| How long after the last aircraft | inbound binary sensor off-delay | 2 minutes |
 
 ## Known limitations
 

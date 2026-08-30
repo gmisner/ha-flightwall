@@ -52,7 +52,31 @@ from .const import (
 )
 
 
-def _schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
+def _setup_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
+    defaults = defaults or {}
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_FLIGHTS_ENTITY,
+                default=defaults.get(CONF_FLIGHTS_ENTITY, DEFAULT_FLIGHTS_ENTITY),
+            ): selector({"entity": {"domain": "sensor"}}),
+            vol.Required(
+                CONF_TV_ENABLED,
+                default=defaults.get(CONF_TV_ENABLED, True),
+            ): bool,
+            vol.Optional(
+                CONF_TV_POWER,
+                description={"suggested_value": defaults.get(CONF_TV_POWER, "")},
+            ): selector({"entity": {"domain": "media_player"}}),
+            vol.Optional(
+                CONF_TV_PLAYER,
+                description={"suggested_value": defaults.get(CONF_TV_PLAYER, "")},
+            ): selector({"entity": {"domain": "media_player"}}),
+        }
+    )
+
+
+def _options_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
     defaults = defaults or {}
     return vol.Schema(
         {
@@ -215,10 +239,10 @@ class FlightwallConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            errors = _validate(user_input)
+            errors = _validate(user_input, require_flights=True)
             if not errors:
                 unique = (
-                    f"{user_input.get(CONF_FLIGHTS_ENTITY) or user_input.get(CONF_ADSB_URL)}|"
+                    f"{user_input.get(CONF_FLIGHTS_ENTITY)}|"
                     f"{user_input.get(CONF_TV_PLAYER) or 'no-tv'}"
                 )
                 await self.async_set_unique_id(unique)
@@ -229,7 +253,7 @@ class FlightwallConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_schema(user_input),
+            data_schema=_setup_schema(user_input),
             errors=errors,
         )
 
@@ -240,7 +264,7 @@ class FlightwallConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class FlightwallOptionsFlow(OptionsFlow):
-    """Change sensor and TV entities later."""
+    """Change entities and display options later."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         self._config_entry = config_entry
@@ -253,29 +277,52 @@ class FlightwallOptionsFlow(OptionsFlow):
             errors = _validate(user_input)
             if not errors:
                 self.hass.config_entries.async_update_entry(
-                    self._config_entry, data=_store(user_input)
+                    self._config_entry, data=_store(user_input, self._config_entry.data)
                 )
                 return self.async_create_entry(title="", data={})
 
         return self.async_show_form(
             step_id="init",
-            data_schema=_schema(dict(self._config_entry.data)),
+            data_schema=_options_schema(dict(self._config_entry.data)),
             errors=errors,
         )
 
 
-def _store(user_input: dict[str, Any]) -> dict[str, Any]:
-    data = dict(user_input)
+def _store(
+    user_input: dict[str, Any], existing: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    data = {
+        CONF_UNITS: DEFAULT_UNITS,
+        CONF_DISPLAY_MODE: DEFAULT_DISPLAY_MODE,
+        CONF_THEME: DEFAULT_THEME,
+        CONF_BOARD_STYLE: DEFAULT_THEME,
+        CONF_MIN_ALTITUDE: DEFAULT_MIN_ALTITUDE,
+        CONF_TIME_FORMAT: DEFAULT_TIME_FORMAT,
+        CONF_SHOW_LOGOS: DEFAULT_SHOW_LOGOS,
+        CONF_QUIET_ENABLED: DEFAULT_QUIET_ENABLED,
+        CONF_QUIET_START: DEFAULT_QUIET_START,
+        CONF_QUIET_END: DEFAULT_QUIET_END,
+        CONF_ADSB_URL: "",
+    }
+    if existing:
+        data.update(existing)
+    data.update(user_input)
     theme = data.get(CONF_THEME) or data.get(CONF_BOARD_STYLE, DEFAULT_THEME)
     data[CONF_THEME] = theme
     data[CONF_BOARD_STYLE] = theme
     return data
 
 
-def _validate(user_input: dict[str, Any]) -> dict[str, str]:
+def _validate(
+    user_input: dict[str, Any], require_flights: bool = False
+) -> dict[str, str]:
     errors: dict[str, str] = {}
     if user_input.get(CONF_TV_ENABLED) and not user_input.get(CONF_TV_PLAYER):
         errors[CONF_TV_PLAYER] = "tv_player_required"
-    if not user_input.get(CONF_FLIGHTS_ENTITY) and not user_input.get(CONF_ADSB_URL):
+    if require_flights and not user_input.get(CONF_FLIGHTS_ENTITY):
+        errors[CONF_FLIGHTS_ENTITY] = "source_required"
+    elif not require_flights and not user_input.get(CONF_FLIGHTS_ENTITY) and not user_input.get(
+        CONF_ADSB_URL
+    ):
         errors[CONF_FLIGHTS_ENTITY] = "source_required"
     return errors
