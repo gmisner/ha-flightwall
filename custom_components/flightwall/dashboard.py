@@ -8,11 +8,13 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import DASHBOARD_PATH, DOMAIN, THEME_HA
+from .const import DASHBOARD_PATH, DOMAIN, THEME_HA, VIEW_PATH
+
+DEFAULT_FLIGHT_ENTITY = "sensor.flightwall_flight"
 
 _LOGGER = logging.getLogger(__name__)
 
-BOARD_MARKDOWN = """{% set b = state_attr('sensor.flightwall_flight','board') or {} %}
+BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 {% if b.has_flight %}
 {% if b.logo_iata %}![](https://images.kiwi.com/airlines/128/{{ b.logo_iata }}.png){% endif %}
 
@@ -49,16 +51,43 @@ BOARD_MARKDOWN = """{% set b = state_attr('sensor.flightwall_flight','board') or
 """
 
 
-def _dashboard_config(theme: str) -> dict[str, Any]:
+def dashboard_path_for(hass: HomeAssistant, entry: Any) -> str:
+    """First config entry keeps /flight-wall; later ones get a suffix."""
+    entries = sorted(
+        hass.config_entries.async_entries(DOMAIN),
+        key=lambda item: item.entry_id,
+    )
+    if not entries or entries[0].entry_id == entry.entry_id:
+        return DASHBOARD_PATH
+    return f"{DASHBOARD_PATH}-{entry.entry_id[:8].lower()}"
+
+
+def flight_entity_for(hass: HomeAssistant, entry: Any) -> str:
+    from homeassistant.helpers import entity_registry as er
+
+    entity_id = er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_flight"
+    )
+    return entity_id or DEFAULT_FLIGHT_ENTITY
+
+
+def _dashboard_config(theme: str, flight_entity: str) -> dict[str, Any]:
     return {
         "title": "Flightwall",
         "views": [
             {
                 "title": "Board",
-                "path": "board",
+                "path": VIEW_PATH,
                 "theme": theme,
                 "type": "masonry",
-                "cards": [{"type": "markdown", "content": BOARD_MARKDOWN}],
+                "cards": [
+                    {
+                        "type": "markdown",
+                        "content": BOARD_MARKDOWN.replace(
+                            "__FLIGHT_ENTITY__", flight_entity
+                        ),
+                    }
+                ],
             }
         ],
     }
@@ -76,16 +105,16 @@ def _lovelace_data(hass: HomeAssistant) -> Any:
     return hass.data.get("lovelace")
 
 
-def _register_sidebar(hass: HomeAssistant) -> None:
+def _register_sidebar(hass: HomeAssistant, path: str) -> None:
     """Put Flightwall in the sidebar."""
     from homeassistant.components import frontend
 
     exists = False
     if hasattr(frontend, "async_panel_exists"):
-        exists = frontend.async_panel_exists(hass, DASHBOARD_PATH)
+        exists = frontend.async_panel_exists(hass, path)
 
     kwargs: dict[str, Any] = {
-        "frontend_url_path": DASHBOARD_PATH,
+        "frontend_url_path": path,
         "require_admin": False,
         "sidebar_title": "Flightwall",
         "sidebar_icon": "mdi:airplane",
@@ -98,9 +127,14 @@ def _register_sidebar(hass: HomeAssistant) -> None:
 
 
 async def async_ensure_dashboard(
-    hass: HomeAssistant, theme: str | None = None
+    hass: HomeAssistant,
+    theme: str | None = None,
+    path: str | None = None,
+    flight_entity: str | None = None,
 ) -> None:
-    """Create or refresh the flight-wall storage dashboard."""
+    """Create or refresh a Flightwall storage dashboard."""
+    path = path or DASHBOARD_PATH
+    flight_entity = flight_entity or DEFAULT_FLIGHT_ENTITY
     ll = _lovelace_data(hass)
     dashboards = getattr(ll, "dashboards", None) if ll is not None else None
     if ll is None or dashboards is None:
@@ -110,7 +144,7 @@ async def async_ensure_dashboard(
         )
         return
 
-    if DASHBOARD_PATH not in dashboards:
+    if path not in dashboards:
         try:
             from homeassistant.components.lovelace.dashboard import (
                 DashboardsCollection,
@@ -119,14 +153,11 @@ async def async_ensure_dashboard(
 
             collection = DashboardsCollection(hass)
             await collection.async_load()
-            if not any(
-                item.get("url_path") == DASHBOARD_PATH
-                for item in collection.async_items()
-            ):
+            if not any(item.get("url_path") == path for item in collection.async_items()):
                 await collection.async_create_item(
                     {
-                        "url_path": DASHBOARD_PATH,
-                        "title": "Flightwall",
+                        "url_path": path,
+                        "title": "Flightwall" if path == DASHBOARD_PATH else path,
                         "icon": "mdi:airplane",
                         "show_in_sidebar": True,
                         "require_admin": False,
@@ -135,29 +166,29 @@ async def async_ensure_dashboard(
             item = next(
                 item
                 for item in collection.async_items()
-                if item.get("url_path") == DASHBOARD_PATH
+                if item.get("url_path") == path
             )
-            dashboards[DASHBOARD_PATH] = LovelaceStorage(hass, item)
+            dashboards[path] = LovelaceStorage(hass, item)
         except (HomeAssistantError, ValueError, StopIteration, ImportError) as err:
-            _LOGGER.warning("Could not create the %s dashboard: %s", DASHBOARD_PATH, err)
+            _LOGGER.warning("Could not create the %s dashboard: %s", path, err)
             return
 
     try:
-        _register_sidebar(hass)
+        _register_sidebar(hass, path)
     except (ValueError, TypeError) as err:
         _LOGGER.debug("Sidebar panel already registered: %s", err)
 
-    dash = dashboards[DASHBOARD_PATH]
+    dash = dashboards[path]
     save = getattr(dash, "async_save", None)
     if save is None:
         return
     try:
-        await save(_dashboard_config(theme or THEME_HA["led"]))
+        await save(_dashboard_config(theme or THEME_HA["led"], flight_entity))
     except HomeAssistantError as err:
         _LOGGER.warning("Could not save the Flightwall dashboard: %s", err)
         return
 
-    _LOGGER.info("Flightwall dashboard is at /%s/%s", DASHBOARD_PATH, "board")
+    _LOGGER.info("Flightwall dashboard is at /%s/%s", path, VIEW_PATH)
 
 
 async def async_write_theme(hass: HomeAssistant) -> None:

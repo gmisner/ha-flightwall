@@ -6,6 +6,8 @@
 - Refresh the TV only while Cast is showing the board (or the source is
   still unknown). Named apps including the TV home screen are left alone
 - Add `flightwall.recast` and a config-entry diagnostics dump
+- Stop pinning entity IDs so a second Flight Wall (another TV or
+  another flights sensor) can be added without collisions
 
 ## 1.9.2
 

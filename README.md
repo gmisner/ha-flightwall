@@ -104,10 +104,13 @@ sensor at that instead.
 6. **Display**, **Theme**, and **Units** are under
    **Settings → Devices & Services → Flight Wall → Configure**.
 
-The integration creates `sensor.flightwall_flight`, the inbound binary
-sensor, the TV switch, and a **Flightwall** sidebar dashboard. The board
-should appear about ten seconds after the TV is turned on. Home
-Assistant never powers the set down.
+The first instance creates `sensor.flightwall_flight`, the inbound
+binary sensor, the TV switch, and a **Flightwall** sidebar dashboard.
+A second Add Integration (another TV, or another flights sensor) gets
+`sensor.flightwall_flight_2` and its own dashboard. Existing installs
+keep their current entity IDs. The board should appear about ten
+seconds after the TV is turned on. Home Assistant never powers the set
+down.
 
 **Display**
 

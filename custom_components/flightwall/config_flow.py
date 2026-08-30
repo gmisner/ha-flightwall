@@ -136,14 +136,19 @@ class FlightwallConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        if self._async_current_entries():
-            return self.async_abort(reason="already_configured")
-
         errors: dict[str, str] = {}
         if user_input is not None:
             errors = _validate(user_input)
             if not errors:
-                return self.async_create_entry(title="Flight Wall", data=_store(user_input))
+                unique = (
+                    f"{user_input.get(CONF_FLIGHTS_ENTITY)}|"
+                    f"{user_input.get(CONF_TV_PLAYER) or 'no-tv'}"
+                )
+                await self.async_set_unique_id(unique)
+                self._abort_if_unique_id_configured()
+                count = len(self._async_current_entries())
+                title = "Flight Wall" if count == 0 else f"Flight Wall ({count + 1})"
+                return self.async_create_entry(title=title, data=_store(user_input))
 
         return self.async_show_form(
             step_id="user",

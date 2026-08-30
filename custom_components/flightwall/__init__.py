@@ -9,7 +9,12 @@ from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import Event, HomeAssistant, ServiceCall
 
 from .const import DOMAIN, SERVICE_RECAST
-from .dashboard import async_ensure_dashboard, async_write_theme
+from .dashboard import (
+    async_ensure_dashboard,
+    async_write_theme,
+    dashboard_path_for,
+    flight_entity_for,
+)
 from .runtime import FlightwallRuntime
 from .tv import RECAST_REASON
 
@@ -26,23 +31,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.runtime_data = runtime
 
     await runtime.async_setup()
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     try:
-        await async_write_theme(hass)
-        await async_ensure_dashboard(hass, runtime.ha_theme)
+        await _async_setup_dashboard(hass, runtime)
     except Exception:
         _LOGGER.exception("Flight Wall dashboard setup failed; TV path still loads")
     if not hass.is_running:
 
         async def _started(_event: Event) -> None:
-            await async_ensure_dashboard(hass, runtime.ha_theme)
+            await _async_setup_dashboard(hass, runtime)
 
         entry.async_on_unload(
             hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _started)
         )
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     _async_register_services(hass)
     return True
+
+
+async def _async_setup_dashboard(hass: HomeAssistant, runtime: FlightwallRuntime) -> None:
+    await async_write_theme(hass)
+    await async_ensure_dashboard(
+        hass,
+        runtime.ha_theme,
+        path=dashboard_path_for(hass, runtime.entry),
+        flight_entity=flight_entity_for(hass, runtime.entry),
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
