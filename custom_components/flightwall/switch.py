@@ -33,12 +33,12 @@ class FlightwallTvSwitch(SwitchEntity, RestoreEntity):
 
     def __init__(self, runtime: FlightwallRuntime) -> None:
         self._runtime = runtime
-        self.entity_id = "switch.flightwall_tv"
+        self._attr_suggested_object_id = "flightwall_tv"
         self._attr_unique_id = f"{runtime.entry.entry_id}_tv"
         self._attr_is_on = bool(runtime.entry.data.get(CONF_TV_ENABLED, False))
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, runtime.entry.entry_id)},
-            name="Flight Wall",
+            name=runtime.entry.title,
             manufacturer="Flight Wall",
         )
 

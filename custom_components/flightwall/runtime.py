@@ -31,7 +31,6 @@ from .const import (
     CONF_TV_PLAYER,
     CONF_TV_POWER,
     CONF_UNITS,
-    DASHBOARD_PATH,
     DEFAULT_DISPLAY_MODE,
     DEFAULT_FLIGHTS_ENTITY,
     DEFAULT_THEME,
@@ -46,6 +45,7 @@ from .const import (
     TV_POWER_ON_DELAY,
     VIEW_PATH,
 )
+from .dashboard import dashboard_path_for
 from .flight import callsign_of, rank_flights
 from .tv import TAKEOVER_REASONS, should_refresh_board, should_select_cast
 
@@ -104,6 +104,10 @@ class FlightwallRuntime:
     @property
     def ha_theme(self) -> str:
         return THEME_HA.get(self.board_style, THEME_HA[DEFAULT_THEME])
+
+    @property
+    def dashboard_path(self) -> str:
+        return dashboard_path_for(self.hass, self.entry)
 
     @property
     def board(self) -> dict[str, Any]:
@@ -324,7 +328,7 @@ class FlightwallRuntime:
             "show_lovelace_view",
             {
                 "entity_id": self.tv_player,
-                "dashboard_path": DASHBOARD_PATH,
+                "dashboard_path": self.dashboard_path,
                 "view_path": VIEW_PATH,
             },
             blocking=False,

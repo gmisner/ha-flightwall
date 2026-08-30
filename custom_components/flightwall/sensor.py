@@ -32,11 +32,11 @@ class FlightwallFlightSensor(SensorEntity):
 
     def __init__(self, runtime: FlightwallRuntime) -> None:
         self._runtime = runtime
-        self.entity_id = "sensor.flightwall_flight"
+        self._attr_suggested_object_id = "flightwall_flight"
         self._attr_unique_id = f"{runtime.entry.entry_id}_flight"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, runtime.entry.entry_id)},
-            name="Flight Wall",
+            name=runtime.entry.title,
             manufacturer="Flight Wall",
         )
         self._unsub: Any = None
