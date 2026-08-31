@@ -69,4 +69,7 @@ class FlightwallFlightSensor(SensorEntity):
             "show_logos": self._runtime.show_logos,
             "min_altitude_ft": self._runtime.min_altitude_ft,
             "refresh_seconds": self._runtime.refresh_seconds,
+            "inbound_delay": self._runtime.inbound_delay_seconds,
+            "waiting_layout": self._runtime.waiting_layout,
+            "overhead_today": self._runtime.overhead_today,
         }

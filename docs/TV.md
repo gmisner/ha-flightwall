@@ -13,7 +13,9 @@ Cast and sends a 4K board image: airline (or a generic aircraft mark),
 callsign, route, cities, type, registration, heading, times, altitude,
 speed, progress, and the next aircraft when a second one is in range.
 Empty sky shows a clock. After an aircraft has passed, the waiting
-board keeps the last overhead with airline, cities, type, and times.
+board keeps the last overhead with airline, cities, type, and times
+(or a large clock first, if you pick that layout under Configure).
+Last overhead survives a Home Assistant restart.
 
 AirPlay is manual screen mirroring from an iPhone, iPad, or Mac. Home
 Assistant cannot start AirPlay.
@@ -32,10 +34,15 @@ home screen — Flight Wall does not take over again until the TV is
 turned off and on, you re-arm the switch, or you call the
 `flightwall.recast` service. Keepalive only refreshes while Cast is
 already showing the board, or while the set has not reported a source
-yet. That is brand-agnostic: there is no SmartCast-only special case.
+yet. Keepalive and flight updates are skipped if the Cast player is
+already `off` or `unavailable`, so a TV that is powering down is not
+woken again. That is brand-agnostic: there is no SmartCast-only
+special case.
 
 **Display**, **Theme**, and **Units** are under **Settings → Devices &
-Services → Flight Wall → Configure**.
+Services → Flight Wall → Configure**. **Inbound off-delay** only holds
+the inbound binary sensor after the sky goes empty; it does not keep
+the television on.
 
 - **Image** — 4K PNG over Cast. Use this when the Chromecast cannot load
   Home Assistant (typical of older built-in Cast receivers). The LED

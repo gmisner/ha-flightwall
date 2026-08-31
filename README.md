@@ -18,9 +18,9 @@ by physical LED flight boards, in particular
   angle**, not ground distance. A jet at 38,000 ft ten kilometres away
   is not the plane in the window; the one on approach at 3,000 ft is.
 - Shows city names, registration, heading, and a next-up flight when a
-  second aircraft is in range. Empty sky shows a clock; after a pass,
-  the waiting board keeps the last aircraft with airline, cities, and
-  type.
+  second aircraft is in range. Empty sky shows the last aircraft (or a
+  large clock, if you pick that waiting layout). Last overhead and
+  today's traffic survive a Home Assistant restart.
 - On a TV, writes a 4K board image and Casts it. On a tablet, open the
   Flightwall dashboard (or the animated split-flap page) in a browser
   or Fully Kiosk.
@@ -49,6 +49,11 @@ TV image themes (HACS, Display → Image):
 ![LED night](docs/images/tv-led.png)
 ![Amber](docs/images/tv-amber.png)
 ![Split-flap TV](docs/images/tv-splitflap.png)
+
+Waiting for traffic (last aircraft, then large-clock layout):
+
+![LED waiting](docs/images/tv-led-waiting.png)
+![LED waiting clock](docs/images/tv-led-waiting-clock.png)
 
 ## Requirements
 
@@ -109,8 +114,9 @@ logos or city-pair routes.
    set is turned off and on, you re-arm the switch, or you call
    `flightwall.recast`. Keepalive only refreshes while Cast is showing
    the board.
-6. **Display**, **Theme**, **Units**, clock, altitude, logos, quiet
-   hours, and an optional local ADS-B URL are under
+6. **Display**, **Theme**, **Units**, clock, altitude, logos, image
+   refresh, inbound off-delay, waiting-board layout, quiet hours, and
+   an optional local ADS-B URL are under
    **Settings → Devices & Services → Flight Wall → Configure**.
 
 The first instance creates `sensor.flightwall_flight`, the inbound
@@ -160,9 +166,9 @@ HACS options live in the integration Configure dialog. See
 
 | What | Where | Default |
 |---|---|---|
-| Display, theme, units, clock, logos, image refresh, quiet hours, ADS-B | Integration → Configure | Image, LED night, imperial, 20 s |
+| Display, theme, units, clock, logos, image refresh, inbound off-delay, waiting board, quiet hours, ADS-B | Integration → Configure | Image, LED night, imperial, 20 s refresh, 120 s inbound, last aircraft waiting |
 | TV is a flight board | `switch.flightwall_tv` | on after setup |
-| How long after the last aircraft | inbound binary sensor off-delay | 2 minutes |
+| How long after the last aircraft | **Inbound off-delay** (inbound binary sensor debounce) | 2 minutes |
 
 ## Known limitations
 
@@ -170,8 +176,10 @@ HACS options live in the integration Configure dialog. See
   wordmarks stay hard to read under the LED grid.
 - **Missing logos** use a generic aircraft mark so the column does not
   collapse.
-- **`aircraft_model` is not always populated.** The ICAO type code is
-  the fallback.
+- **`aircraft_model` is not always populated.** Known ICAO type codes
+  (B738, A320, …) are expanded to a name; unknown codes stay as-is.
+- **Airline logos are cached** under `/local/flightwall/logos/{IATA}.png`
+  after the first fetch from the Kiwi CDN.
 - **The LED grid softens type on purpose.** Use the plain theme on a
   large television if you want maximum sharpness.
 - **Many built-in Chromecasts cannot load a live Home Assistant
@@ -188,9 +196,9 @@ endorsed by, sponsored by, or connected to The Flightwall,
 Flightradar24, Kiwi.com, or any airline.
 
 All product names, logos, and brands are the property of their
-respective owners. Airline logos are fetched at display time from a
-third-party CDN and shown solely to identify the aircraft currently
-overhead.
+respective owners. Airline logos are fetched from a third-party CDN
+on first use, cached under `/local/flightwall/logos/`, and shown
+solely to identify the aircraft currently overhead.
 
 ## Credits
 

@@ -19,6 +19,8 @@ def test_from_adsb_maps_tar1090() -> None:
             "track": 90,
             "r": "N12345",
             "t": "B738",
+            "squawk": "1200",
+            "baro_rate": -640,
         },
         33.94,
         -118.41,
@@ -30,6 +32,8 @@ def test_from_adsb_maps_tar1090() -> None:
     assert flight["heading"] == 90
     assert flight["aircraft_code"] == "B738"
     assert flight["distance"] > 0
+    assert flight["squawk"] == "1200"
+    assert flight["vert_rate"] == -640
 
 
 def test_from_adsb_skips_no_position() -> None:

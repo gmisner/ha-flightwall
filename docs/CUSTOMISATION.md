@@ -13,6 +13,8 @@
 | **Clock** | Follow units, or force 12-hour / 24-hour |
 | **Show airline marks** | Off hides the logo column and does not fetch Kiwi CDN images |
 | **Image refresh** | How often to redraw and recast the still image while Cast is showing the board (5–300 seconds, default 20). Aircraft changes still recast immediately |
+| **Inbound off-delay** | How long `binary_sensor.flightwall_inbound` stays on after the sky goes empty (15–600 seconds, default 120). This is a debounce for automations; it does not keep the TV on |
+| **Waiting board** | Empty-sky layout: last aircraft full-size, or a large clock with last aircraft below |
 | **Quiet hours** | Skip TV takeover and keepalive between the start and end times. `flightwall.recast` still works |
 | **This TV is a flight board** | Same as `switch.flightwall_tv`. Off leaves the set alone. |
 | **Local ADS-B URL** | Optional `http://host:8080/data/aircraft.json` from readsb / tar1090. When set, it is polled every 10 seconds and used instead of Flightradar24 |
@@ -55,12 +57,18 @@ Helpers for the manual package path only:
 - `input_text.flightwall_tv_power` — television `media_player` (on/off)
 - `input_text.flightwall_tv_player` — Chromecast `media_player`
 
-### How long the display stays active after the last aircraft
+### How long the inbound sensor stays on after the last aircraft
 
-`delay_off` on `binary_sensor.flightwall_inbound` in the package file. Two minutes by
-default. This is the single most important value for the feel of the thing: too short
-and the screen flickers between polls, too long and it stays on after the sky is
-empty. Near a busy airport, raise it. In quiet airspace, lower it to 60 seconds.
+On HACS, **Configure → Inbound off-delay** (default 120 seconds). This
+only holds `binary_sensor.flightwall_inbound` so automations do not
+flicker when the flights list blinks empty. It does not keep the TV
+on; the waiting board stays up while the set is on.
+
+On the YAML package, `delay_off` on `binary_sensor.flightwall_inbound`.
+Two minutes by default. This is the single most important value for the
+feel of the package path: too short and the screen flickers between
+polls, too long and it stays on after the sky is empty. Near a busy
+airport, raise it. In quiet airspace, lower it to 60 seconds.
 
 ### Showing every aircraft, including repeats
 

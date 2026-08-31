@@ -20,6 +20,8 @@ CONF_QUIET_START = "quiet_start"
 CONF_QUIET_END = "quiet_end"
 CONF_ADSB_URL = "adsb_url"
 CONF_REFRESH_SECONDS = "refresh_seconds"
+CONF_INBOUND_DELAY = "inbound_delay"
+CONF_WAITING_LAYOUT = "waiting_layout"
 
 ADSB_POLL = timedelta(seconds=10)
 
@@ -47,6 +49,12 @@ DEFAULT_QUIET_END = "07:00:00"
 DEFAULT_REFRESH_SECONDS = 20
 MIN_REFRESH_SECONDS = 5
 MAX_REFRESH_SECONDS = 300
+DEFAULT_INBOUND_DELAY = 120
+MIN_INBOUND_DELAY = 15
+MAX_INBOUND_DELAY = 600
+WAITING_LAST = "last_flight"
+WAITING_CLOCK = "clock"
+DEFAULT_WAITING_LAYOUT = WAITING_LAST
 
 DISPLAY_IMAGE = "image"
 DISPLAY_LIVE = "live"
@@ -61,23 +69,41 @@ THEME_HA = {
 }
 
 MIN_ALTITUDE_FT = 500
-INBOUND_DELAY_OFF = timedelta(minutes=2)
+INBOUND_DELAY_OFF = timedelta(seconds=DEFAULT_INBOUND_DELAY)
 TV_POWER_ON_DELAY = timedelta(seconds=10)
 TV_KEEPALIVE = timedelta(seconds=DEFAULT_REFRESH_SECONDS)
 
 
 def keepalive_interval(seconds: object = None) -> timedelta:
     """Clamp the image refresh to a usable Cast interval."""
+    return timedelta(seconds=_clamp_seconds(
+        seconds, DEFAULT_REFRESH_SECONDS, MIN_REFRESH_SECONDS, MAX_REFRESH_SECONDS
+    ))
+
+
+def inbound_delay(seconds: object = None) -> timedelta:
+    """Clamp the inbound off-delay."""
+    return timedelta(seconds=_clamp_seconds(
+        seconds, DEFAULT_INBOUND_DELAY, MIN_INBOUND_DELAY, MAX_INBOUND_DELAY
+    ))
+
+
+def _clamp_seconds(
+    seconds: object,
+    default: int,
+    minimum: int,
+    maximum: int,
+) -> int:
     if isinstance(seconds, bool) or not isinstance(seconds, (int, float, str)):
-        value = DEFAULT_REFRESH_SECONDS
+        value = default
     else:
         try:
             value = int(round(float(seconds)))
         except (TypeError, ValueError):
-            value = DEFAULT_REFRESH_SECONDS
-    return timedelta(
-        seconds=max(MIN_REFRESH_SECONDS, min(MAX_REFRESH_SECONDS, value))
-    )
+            value = default
+    return max(minimum, min(maximum, value))
+
+
 TV_CAST_SOURCE = "Cast"
 TV_CAST_SOURCES = frozenset({"cast", "chromecast", "google cast"})
 TV_TAKEOVER_REASONS = frozenset({"tv_on", "armed"})

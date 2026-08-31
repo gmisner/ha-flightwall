@@ -15,6 +15,7 @@ from .const import (
     CONF_BOARD_STYLE,
     CONF_DISPLAY_MODE,
     CONF_FLIGHTS_ENTITY,
+    CONF_INBOUND_DELAY,
     CONF_MIN_ALTITUDE,
     CONF_QUIET_ENABLED,
     CONF_QUIET_END,
@@ -27,8 +28,10 @@ from .const import (
     CONF_TV_PLAYER,
     CONF_TV_POWER,
     CONF_UNITS,
+    CONF_WAITING_LAYOUT,
     DEFAULT_DISPLAY_MODE,
     DEFAULT_FLIGHTS_ENTITY,
+    DEFAULT_INBOUND_DELAY,
     DEFAULT_MIN_ALTITUDE,
     DEFAULT_QUIET_ENABLED,
     DEFAULT_QUIET_END,
@@ -38,7 +41,10 @@ from .const import (
     DEFAULT_THEME,
     DEFAULT_TIME_FORMAT,
     DEFAULT_UNITS,
+    DEFAULT_WAITING_LAYOUT,
+    MAX_INBOUND_DELAY,
     MAX_REFRESH_SECONDS,
+    MIN_INBOUND_DELAY,
     MIN_REFRESH_SECONDS,
     DISPLAY_IMAGE,
     DISPLAY_LIVE,
@@ -53,6 +59,8 @@ from .const import (
     TIME_FOLLOW_UNITS,
     UNIT_IMPERIAL,
     UNIT_METRIC,
+    WAITING_CLOCK,
+    WAITING_LAST,
 )
 
 
@@ -232,6 +240,40 @@ def _options_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                 }
             ),
             vol.Required(
+                CONF_INBOUND_DELAY,
+                default=defaults.get(CONF_INBOUND_DELAY, DEFAULT_INBOUND_DELAY),
+            ): selector(
+                {
+                    "number": {
+                        "min": MIN_INBOUND_DELAY,
+                        "max": MAX_INBOUND_DELAY,
+                        "step": 15,
+                        "unit_of_measurement": "s",
+                        "mode": "box",
+                    }
+                }
+            ),
+            vol.Required(
+                CONF_WAITING_LAYOUT,
+                default=defaults.get(CONF_WAITING_LAYOUT, DEFAULT_WAITING_LAYOUT),
+            ): selector(
+                {
+                    "select": {
+                        "options": [
+                            {
+                                "value": WAITING_LAST,
+                                "label": "Last aircraft (full board)",
+                            },
+                            {
+                                "value": WAITING_CLOCK,
+                                "label": "Large clock, then last aircraft",
+                            },
+                        ],
+                        "mode": "dropdown",
+                    }
+                }
+            ),
+            vol.Required(
                 CONF_QUIET_ENABLED,
                 default=defaults.get(CONF_QUIET_ENABLED, DEFAULT_QUIET_ENABLED),
             ): bool,
@@ -321,6 +363,8 @@ def _store(
         CONF_QUIET_START: DEFAULT_QUIET_START,
         CONF_QUIET_END: DEFAULT_QUIET_END,
         CONF_REFRESH_SECONDS: DEFAULT_REFRESH_SECONDS,
+        CONF_INBOUND_DELAY: DEFAULT_INBOUND_DELAY,
+        CONF_WAITING_LAYOUT: DEFAULT_WAITING_LAYOUT,
         CONF_ADSB_URL: "",
     }
     if existing:

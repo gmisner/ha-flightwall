@@ -27,7 +27,7 @@ async def async_setup_entry(
 
 
 class FlightwallInboundSensor(BinarySensorEntity):
-    """On while any aircraft is in the FR24 list, with a two-minute off delay."""
+    """On while any aircraft is in range, with a configurable off-delay."""
 
     _attr_name = "Flightwall Inbound"
     _attr_icon = "mdi:airplane-alert"

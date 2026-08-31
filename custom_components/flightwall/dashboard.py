@@ -26,6 +26,8 @@ BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 
 {{ b.details }}
 
+{{ b.ident }}
+
 {{ b.departed }}
 
 {{ b.arriving }}
@@ -35,6 +37,21 @@ BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 {{ '█' * (b.progress | int(0)) }}{{ '░' * (32 - (b.progress | int(0))) }}
 
 {{ b.next_line }}
+{% else %}
+{% if b.clock_first %}
+# {{ b.clock }}
+
+### WAITING FOR TRAFFIC
+
+{{ b.last_label }}
+
+{{ b.title }}
+
+{{ b.route }}
+
+{{ b.cities }}
+
+{{ b.last_ago }}
 {% else %}
 ### WAITING FOR TRAFFIC
 
@@ -50,6 +67,8 @@ BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 
 {{ b.details }}
 
+{{ b.ident }}
+
 {{ b.departed }}
 
 {{ b.arriving }}
@@ -59,6 +78,7 @@ BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 {{ '█' * (b.progress | int(0)) }}{{ '░' * (32 - (b.progress | int(0))) }}
 
 {{ b.next_line }}
+{% endif %}
 {% endif %}
 {% endif %}
 """

@@ -24,6 +24,7 @@ from flightwall.const import (  # noqa: E402
     STYLE_NIGHT,
     STYLE_PLAIN,
     STYLE_SPLITFLAP,
+    WAITING_CLOCK,
 )
 
 FLIGHT = {
@@ -58,6 +59,25 @@ def main() -> None:
         (STYLE_SPLITFLAP, "tv-splitflap.png"),
     ):
         raw = render_board_png(FLIGHT, now=NOW, style=style, show_logos=True)
+        image = Image.open(BytesIO(raw)).convert("RGB")
+        image = image.resize((1280, 720), Image.Resampling.LANCZOS)
+        dest = OUT / name
+        image.save(dest, "PNG", optimize=True)
+        print(dest, dest.stat().st_size)
+
+    for name, layout in (
+        ("tv-led-waiting.png", None),
+        ("tv-led-waiting-clock.png", WAITING_CLOCK),
+    ):
+        kwargs = {
+            "last_flight": FLIGHT,
+            "last_seen": NOW,
+            "style": STYLE_LED,
+            "show_logos": True,
+        }
+        if layout is not None:
+            kwargs["waiting_layout"] = layout
+        raw = render_board_png(None, now=NOW, **kwargs)
         image = Image.open(BytesIO(raw)).convert("RGB")
         image = image.resize((1280, 720), Image.Resampling.LANCZOS)
         dest = OUT / name
