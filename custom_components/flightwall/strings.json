@@ -17,6 +17,8 @@
           "time_format": "Clock",
           "show_logos": "Show airline marks",
           "refresh_seconds": "Image refresh",
+          "inbound_delay": "Inbound off-delay",
+          "waiting_layout": "Waiting board",
           "quiet_enabled": "Quiet hours (do not take over the TV)",
           "quiet_start": "Quiet hours start",
           "quiet_end": "Quiet hours end"
@@ -49,6 +51,8 @@
           "time_format": "Clock",
           "show_logos": "Show airline marks",
           "refresh_seconds": "Image refresh",
+          "inbound_delay": "Inbound off-delay",
+          "waiting_layout": "Waiting board",
           "quiet_enabled": "Quiet hours (do not take over the TV)",
           "quiet_start": "Quiet hours start",
           "quiet_end": "Quiet hours end"

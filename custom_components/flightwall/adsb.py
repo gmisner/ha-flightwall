@@ -72,6 +72,19 @@ def from_adsb(
             result["heading"] = float(heading)
         except (TypeError, ValueError):
             pass
+    squawk = aircraft.get("squawk")
+    if squawk not in (None, ""):
+        result["squawk"] = str(squawk).strip()
+    rate = aircraft.get("baro_rate")
+    if rate is None:
+        rate = aircraft.get("geom_rate")
+    if rate is None:
+        rate = aircraft.get("vert_rate")
+    if rate is not None:
+        try:
+            result["vert_rate"] = float(rate)
+        except (TypeError, ValueError):
+            pass
     return result
 
 

@@ -30,3 +30,20 @@ def should_refresh_board(*, source: str | None, showing_board: bool) -> bool:
 
 def should_select_cast(reason: str) -> bool:
     return reason in TAKEOVER_REASONS
+
+
+def should_attempt_cast(
+    *,
+    reason: str,
+    power_on: bool,
+    player_state: str | None,
+) -> bool:
+    """False when keepalive would recast into a set that is already gone."""
+    if reason == RECAST_REASON:
+        return True
+    if reason in TV_TAKEOVER_REASONS:
+        return power_on or reason == "armed"
+    if not power_on:
+        return False
+    state = str(player_state or "").strip().lower()
+    return state not in {"", "off", "unavailable", "unknown"}

@@ -6,7 +6,15 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from .const import TIME_12H, TIME_24H, TIME_FOLLOW_UNITS, UNIT_METRIC
+from .aircraft_types import type_name
+from .const import (
+    TIME_12H,
+    TIME_24H,
+    TIME_FOLLOW_UNITS,
+    UNIT_METRIC,
+    WAITING_CLOCK,
+    WAITING_LAST,
+)
 
 CARDINALS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 
@@ -99,6 +107,42 @@ def format_stats(flight: dict[str, Any], units: str) -> str:
     return "  ·  ".join(stats)
 
 
+def vertical_rate_label(flight: dict[str, Any]) -> str:
+    raw = flight.get("vert_rate")
+    if raw is None:
+        raw = flight.get("vertical_speed")
+    if raw is None:
+        raw = flight.get("baro_rate")
+    try:
+        rate = float(raw)
+    except (TypeError, ValueError):
+        return ""
+    if rate > 200:
+        return "CLIMB"
+    if rate < -200:
+        return "DESCEND"
+    return ""
+
+
+def ident_of(flight: dict[str, Any]) -> str:
+    bits: list[str] = []
+    squawk = clean(flight.get("squawk"))
+    if squawk:
+        bits.append(f"SQUAWK {squawk}")
+    rate = vertical_rate_label(flight)
+    if rate:
+        bits.append(rate)
+    try:
+        altitude = float(flight.get("altitude"))
+        distance = float(flight.get("distance"))
+    except (TypeError, ValueError):
+        altitude = None
+        distance = None
+    if altitude is not None and distance is not None and altitude <= 8000 and distance <= 20:
+        bits.append("ON APPROACH")
+    return "  ·  ".join(bits)
+
+
 def progress_of(flight: dict[str, Any], now: datetime) -> int:
     now_ts = int(now.timestamp())
     dep = int(flight.get("time_real_departure") or 0) or int(
@@ -131,6 +175,8 @@ class BoardCopy:
     last_ago: str
     logo_iata: str
     show_logos: bool
+    ident: str
+    clock_first: bool
     flap_rows: list[tuple[str, str]]
 
     def as_dict(self) -> dict[str, Any]:
@@ -161,9 +207,10 @@ def describe_flight(
     """Shared title, route, cities, and times for the live and last-overhead boards."""
     callsign = _callsign(flight)
     airline = _airline_name(flight)
-    model = clean(flight.get("aircraft_model")) or clean(flight.get("aircraft_code"))
+    model = type_name(flight.get("aircraft_code"), flight.get("aircraft_model"))
     registration = clean(flight.get("aircraft_registration")).upper()
     direction = heading_label(flight)
+    ident = ident_of(flight)
     details = "  ·  ".join(
         bit for bit in (model.upper() if model else "", registration, direction) if bit
     )
@@ -224,6 +271,8 @@ def describe_flight(
         "stat_parts": stat_parts,
         "origin_city": origin_city,
         "dest_city": dest_city,
+        "ident": ident,
+        "squawk": clean(flight.get("squawk")),
     }
 
 
@@ -236,6 +285,7 @@ def build_board(
     next_flight: dict[str, Any] | None = None,
     time_format: str = TIME_FOLLOW_UNITS,
     show_logos: bool = True,
+    waiting_layout: str = WAITING_LAST,
 ) -> BoardCopy:
     now = now or datetime.now(UTC)
     date = f"{now.strftime('%a')} {now.day} {now.strftime('%b')}".upper()
@@ -299,6 +349,8 @@ def build_board(
             last_ago=last_ago,
             logo_iata=shown.get("logo_iata", ""),
             show_logos=bool(last_flight) and show_logos,
+            ident=shown.get("ident", ""),
+            clock_first=waiting_layout == WAITING_CLOCK,
             flap_rows=flap_rows,
         )
 
@@ -327,8 +379,15 @@ def build_board(
         last_ago="",
         logo_iata=shown["logo_iata"],
         show_logos=show_logos,
+        ident=shown["ident"],
+        clock_first=False,
         flap_rows=[
             ("FLIGHT", shown["callsign"]),
+            *(
+                [("SQUAWK", shown["squawk"])]
+                if shown.get("squawk")
+                else []
+            ),
             ("AIRCRAFT", shown["model"]),
             ("AIRLINE", shown["airline"]),
             ("TO", shown["dest"]),

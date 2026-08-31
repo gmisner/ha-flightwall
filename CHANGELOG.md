@@ -1,10 +1,24 @@
 # Changelog
 
-## Unreleased
+## 1.11.0
 
+- Keep last overhead and today's traffic across Home Assistant restarts
+- Configure inbound off-delay (15–600 seconds, default 120) so the
+  inbound sensor does not flicker when the flights list blinks empty
+- Skip keepalive and flight recasts when the Cast player is already
+  off or unavailable
+- Resolve ICAO type codes (B738, A320, …) when `aircraft_model` is
+  missing
+- Choose waiting-board layout: last aircraft full-size, or a large
+  clock with last aircraft below
+- Show squawk, climb/descend, and ON APPROACH on the live board
+- Cache airline logos under `/local/flightwall/logos/`
+- Expose `overhead_today` (last 12 unique callsigns, reset each local
+  day) on the flight sensor
 - Write inbound and flight sensor state on the event loop so clearing
-  traffic after the two-minute delay no longer trips Home Assistant's
+  traffic after the inbound delay no longer trips Home Assistant's
   thread-safety check
+- Add waiting-board theme previews
 
 ## 1.10.2
 

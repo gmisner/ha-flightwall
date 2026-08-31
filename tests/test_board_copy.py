@@ -99,3 +99,49 @@ def test_empty_sky_shows_last_flight() -> None:
     assert empty.route == ""
     assert empty.show_logos is False
     assert [label for label, _ in empty.flap_rows] == ["STATUS", "TIME", "DATE"]
+    assert empty.clock_first is False
+
+
+def test_waiting_layout_clock_first() -> None:
+    now = datetime.fromtimestamp(1_700_005_000, UTC)
+    board = build_board(
+        None,
+        now=now,
+        last_flight=FLIGHT,
+        last_seen=now,
+        waiting_layout="clock",
+    )
+    assert not board.has_flight
+    assert board.clock_first
+    assert board.clock
+    assert "AAL123" in board.last_line
+
+
+def test_icao_type_when_model_missing() -> None:
+    now = datetime.fromtimestamp(1_700_005_000, UTC)
+    flight = {**FLIGHT, "aircraft_model": "", "aircraft_code": "B738"}
+    board = build_board(flight, now=now)
+    assert "BOEING 737-800" in board.details
+
+
+def test_ident_shows_squawk_climb_and_approach() -> None:
+    now = datetime.fromtimestamp(1_700_005_000, UTC)
+    flight = {
+        **FLIGHT,
+        "squawk": "1200",
+        "vert_rate": 900,
+        "altitude": 4000,
+        "distance": 8,
+    }
+    board = build_board(flight, now=now)
+    assert "SQUAWK 1200" in board.ident
+    assert "CLIMB" in board.ident
+    assert "ON APPROACH" in board.ident
+    labels = {label: value for label, value in board.flap_rows}
+    assert labels["SQUAWK"] == "1200"
+    descending = build_board({**flight, "vert_rate": -500, "altitude": 20000, "distance": 40}, now=now)
+    assert "DESCEND" in descending.ident
+    assert "ON APPROACH" not in descending.ident
+    level = build_board({**flight, "vert_rate": 10}, now=now)
+    assert "CLIMB" not in level.ident
+    assert "DESCEND" not in level.ident

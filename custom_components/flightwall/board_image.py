@@ -18,6 +18,7 @@ from .const import (
     STYLE_SPLITFLAP,
     TIME_FOLLOW_UNITS,
     UNIT_IMPERIAL,
+    WAITING_LAST,
 )
 
 FONT_PATH = Path(__file__).parent / "fonts" / "Roboto-Bold.ttf"
@@ -88,23 +89,43 @@ def _palette(style: str) -> dict[str, Any]:
     return PALETTES.get(style, PALETTES[STYLE_LED])
 
 
-def _load_logo(iata: str) -> Image.Image | None:
+def _load_logo(iata: str, logo_dir: Path | None = None) -> Image.Image | None:
+    if not iata:
+        return None
+    iata = iata.strip().upper()
     if not iata:
         return None
     if iata in _LOGO_CACHE:
         return _LOGO_CACHE[iata]
+    path = logo_dir / f"{iata}.png" if logo_dir is not None else None
+    if path is not None and path.is_file():
+        try:
+            logo = Image.open(path).convert("RGBA")
+        except OSError:
+            logo = None
+        else:
+            _LOGO_CACHE[iata] = logo
+            return logo
     try:
         with urlopen(LOGO_URL.format(iata=iata), timeout=6) as response:
             logo = Image.open(BytesIO(response.read())).convert("RGBA")
     except OSError:
         _LOGO_CACHE[iata] = None
         return None
+    if path is not None:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            logo.save(path, format="PNG")
+        except OSError:
+            pass
     _LOGO_CACHE[iata] = logo
     return logo
 
 
-def _airline_logo(iata: str, style: str) -> Image.Image | None:
-    logo = _load_logo(iata)
+def _airline_logo(
+    iata: str, style: str, logo_dir: Path | None = None
+) -> Image.Image | None:
+    logo = _load_logo(iata, logo_dir)
     if logo is None:
         return None
     size = (_s(LOGO_TARGET), _s(LOGO_TARGET))
@@ -179,6 +200,8 @@ def render_board_png(
     next_flight: dict[str, Any] | None = None,
     time_format: str = TIME_FOLLOW_UNITS,
     show_logos: bool = True,
+    waiting_layout: str = WAITING_LAST,
+    logo_dir: Path | None = None,
 ) -> bytes:
     """Return PNG bytes for the current flight, or the empty-sky board."""
     now = now or datetime.now(UTC)
@@ -192,6 +215,7 @@ def render_board_png(
         next_flight=next_flight,
         time_format=time_format,
         show_logos=show_logos,
+        waiting_layout=waiting_layout,
     )
     if style == STYLE_SPLITFLAP:
         return _png_bytes(_draw_splitflap(board))
@@ -216,6 +240,7 @@ def render_board_png(
             route_font,
             body_font,
             stats_font,
+            logo_dir,
         )
     else:
         _draw_flight(
@@ -228,6 +253,7 @@ def render_board_png(
             route_font,
             body_font,
             stats_font,
+            logo_dir=logo_dir,
         )
 
     if colors["grid"]:
@@ -246,7 +272,29 @@ def _draw_empty(
     route_font: ImageFont.ImageFont,
     body_font: ImageFont.ImageFont,
     stats_font: ImageFont.ImageFont,
+    logo_dir: Path | None = None,
 ) -> None:
+    left = _s(120)
+    if getattr(board, "clock_first", False) and (board.title or board.route):
+        draw.text((left, _s(80)), board.date, font=stats_font, fill=colors["muted"])
+        draw.text((left, _s(180)), board.clock, font=clock_font, fill=colors["ink"])
+        draw.text((left, _s(460)), "WAITING FOR TRAFFIC", font=body_font, fill=colors["muted"])
+        y = _s(560)
+        if board.last_label:
+            draw.text((left, y), board.last_label, font=stats_font, fill=colors["muted"])
+            y += _s(70)
+        if board.title:
+            draw.text((left, y), board.title, font=callsign_font, fill=colors["muted"])
+            y += _s(70)
+        if board.route:
+            draw.text((left, y), board.route, font=body_font, fill=colors["ink"])
+            y += _s(72)
+        if board.cities:
+            draw.text((left, y), board.cities, font=stats_font, fill=colors["muted"])
+            y += _s(64)
+        if board.last_ago:
+            draw.text((left, y), board.last_ago, font=body_font, fill=colors["ink"])
+        return
     if board.title or board.route:
         waiting = "WAITING FOR TRAFFIC"
         stamp = f"{board.date}   {board.clock}"
@@ -269,9 +317,9 @@ def _draw_empty(
             body_font,
             stats_font,
             y0=_s(40),
+            logo_dir=logo_dir,
         )
         return
-    left = _s(120)
     draw.text((left, _s(80)), board.date, font=stats_font, fill=colors["muted"])
     draw.text((left, _s(180)), board.clock, font=clock_font, fill=colors["ink"])
     draw.text((left, _s(460)), "WAITING FOR TRAFFIC", font=body_font, fill=colors["muted"])
@@ -288,13 +336,14 @@ def _draw_flight(
     body_font: ImageFont.ImageFont,
     stats_font: ImageFont.ImageFont,
     y0: int = 0,
+    logo_dir: Path | None = None,
 ) -> None:
     left = _s(120)
     if getattr(board, "show_logos", True):
         tile = colors["logo_tile"]
         size = _s(260)
         origin = (_s(80), _s(80) + y0)
-        logo = _airline_logo(board.logo_iata, style)
+        logo = _airline_logo(board.logo_iata, style, logo_dir)
         if logo is None:
             logo = _generic_mark(int(size * 0.72), colors["mark"])
         draw.rounded_rectangle(
@@ -319,6 +368,10 @@ def _draw_flight(
     if board.details:
         draw.text((left, y), board.details, font=body_font, fill=colors["muted"])
         y += _s(80)
+    ident = getattr(board, "ident", "")
+    if ident:
+        draw.text((left, y), ident, font=stats_font, fill=colors["muted"])
+        y += _s(64)
     draw.text((left, y), board.departed, font=body_font, fill=colors["ink"])
     y += _s(72)
     draw.text((left, y), board.arriving, font=body_font, fill=colors["ink"])
@@ -446,6 +499,8 @@ def write_board_png(
     next_flight: dict[str, Any] | None = None,
     time_format: str = TIME_FOLLOW_UNITS,
     show_logos: bool = True,
+    waiting_layout: str = WAITING_LAST,
+    logo_dir: Path | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(
@@ -459,5 +514,7 @@ def write_board_png(
             next_flight=next_flight,
             time_format=time_format,
             show_logos=show_logos,
+            waiting_layout=waiting_layout,
+            logo_dir=logo_dir,
         )
     )

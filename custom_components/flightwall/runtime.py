@@ -19,6 +19,7 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.helpers.network import get_url
+from homeassistant.helpers.storage import Store
 
 from .adsb import flights_from_attributes
 from .board_copy import build_board
@@ -30,6 +31,7 @@ from .const import (
     CONF_BOARD_STYLE,
     CONF_DISPLAY_MODE,
     CONF_FLIGHTS_ENTITY,
+    CONF_INBOUND_DELAY,
     CONF_MIN_ALTITUDE,
     CONF_QUIET_ENABLED,
     CONF_QUIET_END,
@@ -41,6 +43,7 @@ from .const import (
     CONF_TV_PLAYER,
     CONF_TV_POWER,
     CONF_UNITS,
+    CONF_WAITING_LAYOUT,
     DEFAULT_DISPLAY_MODE,
     DEFAULT_FLIGHTS_ENTITY,
     DEFAULT_MIN_ALTITUDE,
@@ -51,8 +54,10 @@ from .const import (
     DEFAULT_THEME,
     DEFAULT_TIME_FORMAT,
     DEFAULT_UNITS,
+    DEFAULT_WAITING_LAYOUT,
     DISPLAY_LIVE,
-    INBOUND_DELAY_OFF,
+    DOMAIN,
+    inbound_delay,
     THEME_HA,
     TV_CAST_SOURCE,
     TV_CAST_SOURCES,
@@ -62,8 +67,15 @@ from .const import (
 )
 from .dashboard import dashboard_path_for
 from .flight import callsign_of, rank_flights
+from .persist import dump_state, load_state, merge_overhead
 from .schedule import in_quiet_hours
-from .tv import RECAST_REASON, TAKEOVER_REASONS, should_refresh_board, should_select_cast
+from .tv import (
+    RECAST_REASON,
+    TAKEOVER_REASONS,
+    should_attempt_cast,
+    should_refresh_board,
+    should_select_cast,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,6 +93,7 @@ class FlightwallRuntime:
         self.next_flight: dict[str, Any] | None = None
         self.last_flight: dict[str, Any] | None = None
         self.last_seen: datetime | None = None
+        self.overhead_today: list[dict[str, Any]] = []
         self.inbound = False
         self.tv_enabled = False
         self._live_failed = False
@@ -90,7 +103,9 @@ class FlightwallRuntime:
         self._unsubs: list[CALLBACK_TYPE] = []
         self._inbound_unsub: CALLBACK_TYPE | None = None
         self._cast_delay_unsub: CALLBACK_TYPE | None = None
+        self._save_unsub: CALLBACK_TYPE | None = None
         self._adsb_attributes: dict[str, Any] | None = None
+        self._store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
 
     @property
     def flights_entity(self) -> str:
@@ -144,6 +159,14 @@ class FlightwallRuntime:
         return int(keepalive_interval(self.entry.data.get(CONF_REFRESH_SECONDS)).total_seconds())
 
     @property
+    def inbound_delay_seconds(self) -> int:
+        return int(inbound_delay(self.entry.data.get(CONF_INBOUND_DELAY)).total_seconds())
+
+    @property
+    def waiting_layout(self) -> str:
+        return self.entry.data.get(CONF_WAITING_LAYOUT, DEFAULT_WAITING_LAYOUT)
+
+    @property
     def quiet_enabled(self) -> bool:
         return bool(self.entry.data.get(CONF_QUIET_ENABLED, DEFAULT_QUIET_ENABLED))
 
@@ -174,6 +197,7 @@ class FlightwallRuntime:
             next_flight=self.next_flight,
             time_format=self.time_format,
             show_logos=self.show_logos,
+            waiting_layout=self.waiting_layout,
         ).as_dict()
 
     def async_add_listener(self, update: Callable[[], None]) -> Callable[[], None]:
@@ -190,7 +214,32 @@ class FlightwallRuntime:
         for listener in list(self._listeners):
             listener()
 
+    async def _async_restore(self) -> None:
+        data = await self._store.async_load()
+        last_flight, last_seen, overhead = load_state(data if isinstance(data, dict) else None)
+        if last_flight:
+            self.last_flight = last_flight
+            self.last_seen = last_seen
+        self.overhead_today = overhead
+        self._prune_overhead()
+
+    async def _async_save(self) -> None:
+        await self._store.async_save(
+            dump_state(self.last_flight, self.last_seen, self.overhead_today)
+        )
+
+    @callback
+    def _save_now(self, _now: datetime | None = None) -> None:
+        self._save_unsub = None
+        self.hass.async_create_task(self._async_save())
+
+    def _schedule_save(self) -> None:
+        if self._save_unsub is not None:
+            return
+        self._save_unsub = async_call_later(self.hass, 2, self._save_now)
+
     async def async_setup(self) -> None:
+        await self._async_restore()
         self._refresh_flight()
         if self.flights_entity:
             self._unsubs.append(
@@ -227,6 +276,10 @@ class FlightwallRuntime:
         if self._cast_delay_unsub:
             self._cast_delay_unsub()
             self._cast_delay_unsub = None
+        if self._save_unsub:
+            self._save_unsub()
+            self._save_unsub = None
+        await self._async_save()
 
     @callback
     def _source_changed(self, _event: Event) -> None:
@@ -253,6 +306,13 @@ class FlightwallRuntime:
             return datetime.now(ZoneInfo(self.hass.config.time_zone))
         except (KeyError, ValueError):
             return datetime.now().astimezone()
+
+    def _prune_overhead(self) -> None:
+        day = self._local_now().date().isoformat()
+        pruned = [item for item in self.overhead_today if item.get("day") == day]
+        if pruned != self.overhead_today:
+            self.overhead_today = pruned
+            self._schedule_save()
 
     async def _poll_adsb(self, _now: datetime | None) -> None:
         if not self.adsb_url:
@@ -288,12 +348,17 @@ class FlightwallRuntime:
             float(self.hass.config.longitude or 0),
         )
 
+        self._prune_overhead()
         ranked = rank_flights(flights, self.min_altitude_ft)
         selected = ranked[0] if ranked else None
         nxt = ranked[1] if len(ranked) > 1 else None
         if selected is not None:
             self.last_flight = dict(selected)
             self.last_seen = self._local_now()
+            self.overhead_today = merge_overhead(
+                self.overhead_today, selected, self.last_seen
+            )
+            self._schedule_save()
         self.flight = selected
         self.next_flight = nxt
         self.callsign = callsign_of(selected)
@@ -317,7 +382,9 @@ class FlightwallRuntime:
             return
 
         self._inbound_unsub = async_call_later(
-            self.hass, INBOUND_DELAY_OFF.total_seconds(), self._inbound_off
+            self.hass,
+            inbound_delay(self.entry.data.get(CONF_INBOUND_DELAY)).total_seconds(),
+            self._inbound_off,
         )
 
     def _tv_is_on(self) -> bool:
@@ -325,6 +392,14 @@ class FlightwallRuntime:
             return False
         state = self.hass.states.get(self.tv_power)
         return state is not None and state.state not in OFF_STATES
+
+    def _player_state(self) -> str:
+        if not self.tv_player:
+            return ""
+        state = self.hass.states.get(self.tv_player)
+        if state is None:
+            return ""
+        return str(state.state or "").strip().lower()
 
     def _tv_source(self) -> str:
         if not self.tv_power:
@@ -394,6 +469,8 @@ class FlightwallRuntime:
             self.next_flight,
             self.time_format,
             self.show_logos,
+            self.waiting_layout,
+            Path(self.hass.config.path("www", "flightwall", "logos")),
         )
 
     async def _select_cast_source(self, reason: str) -> None:
@@ -438,6 +515,13 @@ class FlightwallRuntime:
             return
         if reason != "armed" and not self._tv_is_on():
             return
+        if not should_attempt_cast(
+            reason=reason,
+            power_on=self._tv_is_on(),
+            player_state=self._player_state(),
+        ):
+            _LOGGER.debug("Skip Flight Wall cast (%s); TV or Cast is off", reason)
+            return
         if reason != RECAST_REASON and self._in_quiet_hours():
             _LOGGER.debug("Skip Flight Wall cast (%s); quiet hours", reason)
             return
@@ -451,6 +535,7 @@ class FlightwallRuntime:
             if self._cast_delay_unsub:
                 self._cast_delay_unsub()
 
+            @callback
             def _go(_now: datetime) -> None:
                 self._cast_delay_unsub = None
                 self.hass.add_job(self.async_cast(reason="tv_on"))
