@@ -185,6 +185,7 @@ class FlightwallRuntime:
 
         return _remove
 
+    @callback
     def _notify(self) -> None:
         for listener in list(self._listeners):
             listener()
@@ -299,6 +300,12 @@ class FlightwallRuntime:
         self._set_inbound(len(flights) > 0)
         self._notify()
 
+    @callback
+    def _inbound_off(self, _now: datetime) -> None:
+        self._inbound_unsub = None
+        self.inbound = False
+        self._notify()
+
     def _set_inbound(self, present: bool) -> None:
         if present:
             if self._inbound_unsub:
@@ -309,13 +316,8 @@ class FlightwallRuntime:
         if not self.inbound or self._inbound_unsub is not None:
             return
 
-        def _clear(_now: datetime) -> None:
-            self._inbound_unsub = None
-            self.inbound = False
-            self._notify()
-
         self._inbound_unsub = async_call_later(
-            self.hass, INBOUND_DELAY_OFF.total_seconds(), _clear
+            self.hass, INBOUND_DELAY_OFF.total_seconds(), self._inbound_off
         )
 
     def _tv_is_on(self) -> bool:

@@ -57,4 +57,4 @@ class FlightwallInboundSensor(BinarySensorEntity):
     @callback
     def _handle_update(self) -> None:
         self._attr_is_on = self._runtime.inbound
-        self.async_write_ha_state()
+        self.schedule_update_ha_state()

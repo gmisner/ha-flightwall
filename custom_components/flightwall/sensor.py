@@ -53,7 +53,7 @@ class FlightwallFlightSensor(SensorEntity):
     @callback
     def _handle_update(self) -> None:
         self._attr_native_value = self._runtime.callsign
-        self.async_write_ha_state()
+        self.schedule_update_ha_state()
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

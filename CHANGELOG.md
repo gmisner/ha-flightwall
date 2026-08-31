@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Write inbound and flight sensor state on the event loop so clearing
+  traffic after the two-minute delay no longer trips Home Assistant's
+  thread-safety check
+
 ## 1.10.2
 
 - Refresh the static TV image on a configurable interval (default 20 seconds)
