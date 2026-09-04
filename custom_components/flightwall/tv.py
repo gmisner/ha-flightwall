@@ -22,6 +22,22 @@ def is_cast_source(source: str | None) -> bool:
     return normalize_source(source) in TV_CAST_SOURCES
 
 
+def cast_source_name(source_list: object | None) -> str | None:
+    """Return the TV's Cast / Chromecast input, using the name it reports.
+
+    HomeKit and similar power entities often list SMARTCAST, AirPlay, or
+    HDMI only. Those are not Cast, so this returns None and the caller
+    should skip ``select_source``.
+    """
+    if not isinstance(source_list, (list, tuple)):
+        return None
+    for item in source_list:
+        name = str(item or "").strip()
+        if name and is_cast_source(name):
+            return name
+    return None
+
+
 def should_refresh_board(*, source: str | None, showing_board: bool) -> bool:
     if showing_board or is_cast_source(source):
         return True

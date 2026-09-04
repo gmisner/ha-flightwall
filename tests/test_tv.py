@@ -6,6 +6,7 @@ from flightwall.aircraft_types import type_name
 from flightwall.const import inbound_delay, keepalive_interval
 from flightwall.persist import dump_state, load_state, merge_overhead
 from flightwall.tv import (
+    cast_source_name,
     is_cast_source,
     should_attempt_cast,
     should_refresh_board,
@@ -19,6 +20,17 @@ def test_cast_source_names() -> None:
     assert is_cast_source("Google Cast")
     assert not is_cast_source("Netflix")
     assert not is_cast_source("SmartCast Home")
+    assert not is_cast_source("SMARTCAST")
+
+
+def test_cast_source_from_tv_list() -> None:
+    assert cast_source_name(["HDMI-1", "Cast", "Netflix"]) == "Cast"
+    assert cast_source_name(["HDMI", "Google Cast"]) == "Google Cast"
+    assert cast_source_name(["Chromecast"]) == "Chromecast"
+    assert cast_source_name(["SMARTCAST", "AirPlay", "HDMI"]) is None
+    assert cast_source_name(["SmartCast Home", "Netflix"]) is None
+    assert cast_source_name([]) is None
+    assert cast_source_name(None) is None
 
 
 def test_refresh_only_on_cast_or_unknown_source() -> None:

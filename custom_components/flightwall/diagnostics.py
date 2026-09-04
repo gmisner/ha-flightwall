@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
 from .runtime import FlightwallRuntime
+from .tv import cast_source_name
 
 
 async def async_get_config_entry_diagnostics(
@@ -35,6 +36,12 @@ async def async_get_config_entry_diagnostics(
         "tv_player": runtime.tv_player,
         "tv_on": runtime._tv_is_on(),
         "tv_source": runtime._tv_source(),
+        "tv_source_list": (
+            power.attributes.get("source_list") if power else None
+        ),
+        "tv_cast_source": (
+            cast_source_name(power.attributes.get("source_list")) if power else None
+        ),
         "player_state": player.state if player else None,
         "player_app": (
             str(player.attributes.get("app_name") or "") if player else None

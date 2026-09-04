@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.11.1
+
+- Skip `media_player.select_source` when the TV power entity has no
+  Cast / Chromecast input. HomeKit and similar source lists (SMARTCAST,
+  AirPlay, HDMI) no longer log a failed Cast switch; the Chromecast
+  `play_media` path still shows the board
+
 ## 1.11.0
 
 - Keep last overhead and today's traffic across Home Assistant restarts

@@ -59,7 +59,6 @@ from .const import (
     DOMAIN,
     inbound_delay,
     THEME_HA,
-    TV_CAST_SOURCE,
     TV_CAST_SOURCES,
     TV_POWER_ON_DELAY,
     VIEW_PATH,
@@ -72,6 +71,7 @@ from .schedule import in_quiet_hours
 from .tv import (
     RECAST_REASON,
     TAKEOVER_REASONS,
+    cast_source_name,
     should_attempt_cast,
     should_refresh_board,
     should_select_cast,
@@ -474,14 +474,24 @@ class FlightwallRuntime:
         )
 
     async def _select_cast_source(self, reason: str) -> None:
-        if self.tv_power and should_select_cast(reason):
-            await self.hass.services.async_call(
-                "media_player",
-                "select_source",
-                {"entity_id": self.tv_power, "source": TV_CAST_SOURCE},
-                blocking=False,
+        if not self.tv_power or not should_select_cast(reason):
+            return
+        state = self.hass.states.get(self.tv_power)
+        if state is None:
+            return
+        source = cast_source_name(state.attributes.get("source_list"))
+        if source is None:
+            _LOGGER.debug(
+                "Skip select_source; %s has no Cast input", self.tv_power
             )
-            await asyncio.sleep(1.5)
+            return
+        await self.hass.services.async_call(
+            "media_player",
+            "select_source",
+            {"entity_id": self.tv_power, "source": source},
+            blocking=False,
+        )
+        await asyncio.sleep(1.5)
 
     async def _play_board_image(self) -> None:
         await self.hass.services.async_call(

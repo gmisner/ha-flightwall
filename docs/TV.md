@@ -123,6 +123,11 @@ data:
   source: Cast
 ```
 
+Only TVs that list a Cast / Chromecast input need that source switch.
+HomeKit and similar power entities often list SMARTCAST, AirPlay, or
+HDMI instead; Flight Wall skips `select_source` there and still plays
+the board on the Cast player.
+
 ```yaml
 action: media_player.play_media
 data:
