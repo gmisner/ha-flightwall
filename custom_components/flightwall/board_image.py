@@ -20,12 +20,12 @@ from .const import (
     UNIT_IMPERIAL,
     WAITING_LAST,
 )
+from .logos import logo_bytes_unusable, logo_cache_name, logo_url
 
 FONT_PATH = Path(__file__).parent / "fonts" / "Roboto-Bold.ttf"
 CANVAS = (3840, 2160)
 SCALE = 2
 CELL = 3
-LOGO_URL = "https://images.kiwi.com/airlines/128/{iata}.png"
 LOGO_TARGET = 220
 
 PALETTES = {
@@ -89,6 +89,15 @@ def _palette(style: str) -> dict[str, Any]:
     return PALETTES.get(style, PALETTES[STYLE_LED])
 
 
+def _open_logo(data: bytes) -> Image.Image | None:
+    if logo_bytes_unusable(data):
+        return None
+    try:
+        return Image.open(BytesIO(data)).convert("RGBA")
+    except OSError:
+        return None
+
+
 def _load_logo(iata: str, logo_dir: Path | None = None) -> Image.Image | None:
     if not iata:
         return None
@@ -97,25 +106,29 @@ def _load_logo(iata: str, logo_dir: Path | None = None) -> Image.Image | None:
         return None
     if iata in _LOGO_CACHE:
         return _LOGO_CACHE[iata]
-    path = logo_dir / f"{iata}.png" if logo_dir is not None else None
+    path = logo_dir / logo_cache_name(iata) if logo_dir is not None else None
     if path is not None and path.is_file():
         try:
-            logo = Image.open(path).convert("RGBA")
+            logo = _open_logo(path.read_bytes())
         except OSError:
             logo = None
-        else:
+        if logo is not None:
             _LOGO_CACHE[iata] = logo
             return logo
     try:
-        with urlopen(LOGO_URL.format(iata=iata), timeout=6) as response:
-            logo = Image.open(BytesIO(response.read())).convert("RGBA")
+        with urlopen(logo_url(iata), timeout=6) as response:
+            data = response.read()
     except OSError:
+        _LOGO_CACHE[iata] = None
+        return None
+    logo = _open_logo(data)
+    if logo is None:
         _LOGO_CACHE[iata] = None
         return None
     if path is not None:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            logo.save(path, format="PNG")
+            path.write_bytes(data)
         except OSError:
             pass
     _LOGO_CACHE[iata] = logo

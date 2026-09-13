@@ -239,7 +239,7 @@ actions:
                           {% set prog = ([[(((nw - dep) / ([arr - dep, 1] | max)) * 32) | round(0) | int, 0] | max, 32] | min) if (arr > dep and dep > 0) else 0 %}
                           {% set alraw = airline if airline else airlinel %}
                           {% set al = alraw | truncate(22, true, '') | trim %}
-                          ![]( https://images.kiwi.com/airlines/128/{{ iata | upper if iata else 'non-existing' }}.png )
+                          ![]( {{ 'https://www.gstatic.com/flights/airline_logos/70px/WN.png' if (iata | upper) == 'WN' else 'https://images.kiwi.com/airlines/128/' ~ (iata | upper if iata else 'non-existing') ~ '.png' }} )
                           ## {{ cs if cs else reg }}{% if al %} ({{ al }}){% endif %}
 
                           # {% if org and dst %}{{ org }}-{{ dst }}{% elif reg %}{{ reg }}{% else %}IN FLIGHT{% endif %}

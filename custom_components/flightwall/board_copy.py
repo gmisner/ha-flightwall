@@ -15,6 +15,7 @@ from .const import (
     WAITING_CLOCK,
     WAITING_LAST,
 )
+from .logos import logo_url
 
 CARDINALS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 
@@ -174,6 +175,7 @@ class BoardCopy:
     last_line: str
     last_ago: str
     logo_iata: str
+    logo_url: str
     show_logos: bool
     ident: str
     clock_first: bool
@@ -252,6 +254,7 @@ def describe_flight(
         estimated = arriving[arriving.rfind(" IN ") + 1 :].strip()
     dest = dest_city or clean(flight.get("airport_destination_code_iata"))
     route = route_of(flight)
+    iata = clean(flight.get("airline_iata")).upper() if show_logos else ""
     return {
         "callsign": callsign,
         "airline": airline,
@@ -264,7 +267,8 @@ def describe_flight(
         "stats": stats,
         "progress": progress_of(flight, now),
         "next_line": next_line,
-        "logo_iata": clean(flight.get("airline_iata")).upper() if show_logos else "",
+        "logo_iata": iata,
+        "logo_url": logo_url(iata) if iata else "",
         "model": model,
         "dest": dest,
         "estimated": estimated,
@@ -348,6 +352,7 @@ def build_board(
             last_line=last_line,
             last_ago=last_ago,
             logo_iata=shown.get("logo_iata", ""),
+            logo_url=shown.get("logo_url", ""),
             show_logos=bool(last_flight) and show_logos,
             ident=shown.get("ident", ""),
             clock_first=waiting_layout == WAITING_CLOCK,
@@ -378,6 +383,7 @@ def build_board(
         last_line="",
         last_ago="",
         logo_iata=shown["logo_iata"],
+        logo_url=shown["logo_url"],
         show_logos=show_logos,
         ident=shown["ident"],
         clock_first=False,

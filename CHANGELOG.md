@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.11.2
+
+- Use Southwest's heart mark instead of Kiwi's own logo for IATA `WN`
+
 ## 1.11.1
 
 - Skip `media_player.select_source` when the TV power entity has no

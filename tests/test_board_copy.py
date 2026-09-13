@@ -57,11 +57,21 @@ def test_build_board_has_route_and_logo() -> None:
     assert board.route == "LAX-JFK"
     assert "LOS ANGELES" in board.cities
     assert board.logo_iata == "AA"
+    assert board.logo_url == "https://images.kiwi.com/airlines/128/AA.png"
     assert board.title.startswith("AAL123")
     assert any(label == "FLIGHT" and value == "AAL123" for label, value in board.flap_rows)
     hidden = build_board(FLIGHT, now=now, show_logos=False)
     assert hidden.logo_iata == ""
+    assert hidden.logo_url == ""
     assert hidden.show_logos is False
+
+
+def test_southwest_uses_google_logo_not_kiwi() -> None:
+    now = datetime.fromtimestamp(1_700_005_000, UTC)
+    flight = {**FLIGHT, "airline_short": "Southwest", "airline_iata": "WN"}
+    board = build_board(flight, now=now)
+    assert board.logo_iata == "WN"
+    assert board.logo_url == "https://www.gstatic.com/flights/airline_logos/70px/WN.png"
 
 
 def test_empty_sky_shows_last_flight() -> None:
@@ -93,6 +103,7 @@ def test_empty_sky_shows_last_flight() -> None:
     assert labels["TO"] == "NEW YORK"
     hidden = build_board(None, now=now, last_flight=FLIGHT, show_logos=False)
     assert hidden.logo_iata == ""
+    assert hidden.logo_url == ""
     assert hidden.show_logos is False
     empty = build_board(None, now=now)
     assert empty.title == ""

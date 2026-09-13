@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 
 BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 {% if b.has_flight %}
-{% if b.logo_iata %}![](https://images.kiwi.com/airlines/128/{{ b.logo_iata }}.png){% endif %}
+{% if b.logo_url %}![]({{ b.logo_url }}){% endif %}
 
 ## {{ b.title }}
 
@@ -57,7 +57,7 @@ BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 
 {{ b.date }} {{ b.clock }}
 {% if b.title %}
-{% if b.logo_iata %}![](https://images.kiwi.com/airlines/128/{{ b.logo_iata }}.png){% endif %}
+{% if b.logo_url %}![]({{ b.logo_url }}){% endif %}
 
 ## {{ b.title }}
 
