@@ -21,12 +21,15 @@ from .const import (
     WAITING_LAST,
 )
 from .logos import logo_bytes_unusable, logo_cache_name, logo_url
+from .radar import draw_radar
+from .silhouettes import load_silhouette_svg, rasterize_svg, shape_code
 
 FONT_PATH = Path(__file__).parent / "fonts" / "Roboto-Bold.ttf"
 CANVAS = (3840, 2160)
 SCALE = 2
 CELL = 3
 LOGO_TARGET = 220
+SILHOUETTE_TARGET = 96
 
 PALETTES = {
     STYLE_LED: {
@@ -72,6 +75,7 @@ PALETTES = {
 }
 
 _LOGO_CACHE: dict[str, Image.Image | None] = {}
+_SIL_CACHE: dict[str, bytes | None] = {}
 
 
 def _s(value: int) -> int:
@@ -133,6 +137,28 @@ def _load_logo(iata: str, logo_dir: Path | None = None) -> Image.Image | None:
             pass
     _LOGO_CACHE[iata] = logo
     return logo
+
+
+def _load_silhouette_svg(code: str, sil_dir: Path | None = None) -> bytes | None:
+    key = shape_code(code)
+    if not key:
+        return None
+    if key in _SIL_CACHE:
+        return _SIL_CACHE[key]
+    svg = load_silhouette_svg(key, sil_dir)
+    _SIL_CACHE[key] = svg
+    return svg
+
+
+def _type_silhouette(
+    code: str,
+    fill: tuple[int, int, int],
+    sil_dir: Path | None = None,
+) -> Image.Image | None:
+    svg = _load_silhouette_svg(code, sil_dir)
+    if not svg:
+        return None
+    return rasterize_svg(svg, fill, _s(SILHOUETTE_TARGET))
 
 
 def _airline_logo(
@@ -215,6 +241,8 @@ def render_board_png(
     show_logos: bool = True,
     waiting_layout: str = WAITING_LAST,
     logo_dir: Path | None = None,
+    sil_dir: Path | None = None,
+    home: tuple[float, float] | None = None,
 ) -> bytes:
     """Return PNG bytes for the current flight, or the empty-sky board."""
     now = now or datetime.now(UTC)
@@ -254,6 +282,10 @@ def render_board_png(
             body_font,
             stats_font,
             logo_dir,
+            sil_dir,
+            home,
+            last_flight,
+            units,
         )
     else:
         _draw_flight(
@@ -267,6 +299,10 @@ def render_board_png(
             body_font,
             stats_font,
             logo_dir=logo_dir,
+            sil_dir=sil_dir,
+            home=home,
+            flight=flight,
+            units=units,
         )
 
     if colors["grid"]:
@@ -286,6 +322,10 @@ def _draw_empty(
     body_font: ImageFont.ImageFont,
     stats_font: ImageFont.ImageFont,
     logo_dir: Path | None = None,
+    sil_dir: Path | None = None,
+    home: tuple[float, float] | None = None,
+    last_flight: dict[str, Any] | None = None,
+    units: str = UNIT_IMPERIAL,
 ) -> None:
     left = _s(120)
     if getattr(board, "clock_first", False) and (board.title or board.route):
@@ -331,6 +371,10 @@ def _draw_empty(
             stats_font,
             y0=_s(40),
             logo_dir=logo_dir,
+            sil_dir=sil_dir,
+            home=home,
+            flight=last_flight,
+            units=units,
         )
         return
     draw.text((left, _s(80)), board.date, font=stats_font, fill=colors["muted"])
@@ -350,6 +394,10 @@ def _draw_flight(
     stats_font: ImageFont.ImageFont,
     y0: int = 0,
     logo_dir: Path | None = None,
+    sil_dir: Path | None = None,
+    home: tuple[float, float] | None = None,
+    flight: dict[str, Any] | None = None,
+    units: str = UNIT_IMPERIAL,
 ) -> None:
     left = _s(120)
     if getattr(board, "show_logos", True):
@@ -380,6 +428,17 @@ def _draw_flight(
         y = _s(420) + y0
     if board.details:
         draw.text((left, y), board.details, font=body_font, fill=colors["muted"])
+        silhouette = _type_silhouette(
+            getattr(board, "aircraft_code", ""),
+            colors["muted"],
+            sil_dir,
+        )
+        if silhouette is not None:
+            box = draw.textbbox((left, y), board.details, font=body_font)
+            sx = box[2] + _s(28)
+            sy = y + ((box[3] - box[1]) - silhouette.height) // 2
+            if sx + silhouette.width < CANVAS[0] - _s(80):
+                image.paste(silhouette, (sx, max(sy, 0)), silhouette)
         y += _s(80)
     ident = getattr(board, "ident", "")
     if ident:
@@ -405,6 +464,19 @@ def _draw_flight(
             font=stats_font,
             fill=colors["muted"],
         )
+    if home is not None and flight:
+        radar = draw_radar(
+            _s(440),
+            home,
+            flight,
+            colors,
+            units=units,
+            font=_font(18),
+        )
+        if radar is not None:
+            rx = CANVAS[0] - _s(80) - radar.width
+            ry = _s(80) + y0
+            image.paste(radar, (rx, ry), radar)
 
 
 FLAP_COLS = 16
@@ -514,6 +586,8 @@ def write_board_png(
     show_logos: bool = True,
     waiting_layout: str = WAITING_LAST,
     logo_dir: Path | None = None,
+    sil_dir: Path | None = None,
+    home: tuple[float, float] | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(
@@ -529,5 +603,7 @@ def write_board_png(
             show_logos=show_logos,
             waiting_layout=waiting_layout,
             logo_dir=logo_dir,
+            sil_dir=sil_dir,
+            home=home,
         )
     )

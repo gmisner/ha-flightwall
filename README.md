@@ -17,10 +17,12 @@ by physical LED flight boards, in particular
 - Picks the single most visible aircraft in range using **elevation
   angle**, not ground distance. A jet at 38,000 ft ten kilometres away
   is not the plane in the window; the one on approach at 3,000 ft is.
-- Shows city names, registration, heading, and a next-up flight when a
-  second aircraft is in range. Empty sky shows the last aircraft (or a
-  large clock, if you pick that waiting layout). Last overhead and
-  today's traffic survive a Home Assistant restart.
+- Shows city names, registration, heading, a type silhouette beside
+  that line, a radar of the aircraft versus the house, and a next-up
+  flight when a second aircraft is in range.
+  Empty sky shows the last aircraft (or a large clock, if you pick
+  that waiting layout). Last overhead and today's traffic survive a
+  Home Assistant restart.
 - On a TV, writes a 4K board image and Casts it. On a tablet, open the
   Flightwall dashboard (or the animated split-flap page) in a browser
   or Fully Kiosk.
@@ -180,6 +182,13 @@ HACS options live in the integration Configure dialog. See
   (B738, A320, …) are expanded to a name; unknown codes stay as-is.
 - **Airline logos are cached** under `/local/flightwall/logos/{IATA}.png`
   after the first fetch from the Kiwi CDN.
+- **Type silhouettes** sit beside the aircraft line, not in the logo
+  tile. Unknown ICAO codes omit the shape. Cached under
+  `/local/flightwall/silhouettes/`.
+- **The radar** is north-up with the house at the centre. It needs
+  Home Assistant’s location and the flight’s coordinates. FR24 does
+  not send a trail; a track line only appears if the flight dict
+  includes one.
 - **The LED grid softens type on purpose.** Use the plain theme on a
   large television if you want maximum sharpness.
 - **Many built-in Chromecasts cannot load a live Home Assistant
@@ -205,7 +214,9 @@ solely to identify the aircraft currently overhead.
 Inspired by [The Flightwall](https://theflightwall.com/). Flight data
 via the
 [Flightradar24 integration](https://github.com/AlexandrErohin/home-assistant-flightradar24)
-by AlexandrErohin. Airline logos from the Kiwi.com CDN. Tablet typeface
+by AlexandrErohin. Airline logos from the Kiwi.com CDN. Aircraft silhouettes from
+[AircraftShapesSVG](https://github.com/RexKramer1/AircraftShapesSVG)
+(GPL-3, fetched on first use). Tablet typeface
 is [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P)
 by CodeMan38. TV board typeface is
 [Roboto](https://fonts.google.com/specimen/Roboto).

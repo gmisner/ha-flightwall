@@ -449,6 +449,16 @@ class FlightwallRuntime:
         if enabled:
             await self.async_cast(reason="armed")
 
+    def _home_latlon(self) -> tuple[float, float] | None:
+        try:
+            lat = float(self.hass.config.latitude)
+            lon = float(self.hass.config.longitude)
+        except (TypeError, ValueError):
+            return None
+        if lat == 0 and lon == 0:
+            return None
+        return lat, lon
+
     def _board_path(self) -> Path:
         return Path(self.hass.config.path("www")) / BOARD_PNG_NAME
 
@@ -471,6 +481,8 @@ class FlightwallRuntime:
             self.show_logos,
             self.waiting_layout,
             Path(self.hass.config.path("www", "flightwall", "logos")),
+            Path(self.hass.config.path("www", "flightwall", "silhouettes")),
+            self._home_latlon(),
         )
 
     async def _select_cast_source(self, reason: str) -> None:

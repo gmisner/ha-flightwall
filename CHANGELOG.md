@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.12.0
+
+- Draw a top-down aircraft silhouette next to the type line. Airline
+  marks stay in the logo column. Shapes come from AircraftShapesSVG
+  and cache under `/local/flightwall/silhouettes/`
+- Show a north-up radar on the right: house at the centre, the
+  selected aircraft on 2.5 / 5 / 10 mile rings (or km)
+
 ## 1.11.2
 
 - Use Southwest's heart mark instead of Kiwi's own logo for IATA `WN`

@@ -11,6 +11,7 @@ FLIGHT = {
     "airline_short": "American",
     "airline_iata": "AA",
     "aircraft_model": "Boeing 737-800",
+    "aircraft_code": "B738",
     "aircraft_registration": "N12345",
     "altitude": 8000,
     "ground_speed": 280,
@@ -59,6 +60,7 @@ def test_build_board_has_route_and_logo() -> None:
     assert board.logo_iata == "AA"
     assert board.logo_url == "https://images.kiwi.com/airlines/128/AA.png"
     assert board.title.startswith("AAL123")
+    assert board.aircraft_code == "B738"
     assert any(label == "FLIGHT" and value == "AAL123" for label, value in board.flap_rows)
     hidden = build_board(FLIGHT, now=now, show_logos=False)
     assert hidden.logo_iata == ""

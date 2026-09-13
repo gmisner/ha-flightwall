@@ -178,6 +178,7 @@ class BoardCopy:
     logo_url: str
     show_logos: bool
     ident: str
+    aircraft_code: str
     clock_first: bool
     flap_rows: list[tuple[str, str]]
 
@@ -277,6 +278,7 @@ def describe_flight(
         "dest_city": dest_city,
         "ident": ident,
         "squawk": clean(flight.get("squawk")),
+        "aircraft_code": clean(flight.get("aircraft_code")).upper(),
     }
 
 
@@ -355,6 +357,7 @@ def build_board(
             logo_url=shown.get("logo_url", ""),
             show_logos=bool(last_flight) and show_logos,
             ident=shown.get("ident", ""),
+            aircraft_code=shown.get("aircraft_code", ""),
             clock_first=waiting_layout == WAITING_CLOCK,
             flap_rows=flap_rows,
         )
@@ -386,6 +389,7 @@ def build_board(
         logo_url=shown["logo_url"],
         show_logos=show_logos,
         ident=shown["ident"],
+        aircraft_code=shown["aircraft_code"],
         clock_first=False,
         flap_rows=[
             ("FLIGHT", shown["callsign"]),
