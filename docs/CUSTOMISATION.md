@@ -12,6 +12,7 @@
 | **Minimum altitude** | Ignore aircraft at or below this (default 500 ft) |
 | **Clock** | Follow units, or force 12-hour / 24-hour |
 | **Show airline marks** | Off hides the logo column and does not fetch Kiwi CDN images |
+| **Show radar** | Off hides the north-up radar (house at the centre, aircraft on range rings) |
 | **Image refresh** | How often to redraw and recast the still image while Cast is showing the board (5–300 seconds, default 20). Aircraft changes still recast immediately |
 | **Inbound off-delay** | How long `binary_sensor.flightwall_inbound` stays on after the sky goes empty (15–600 seconds, default 120). This is a debounce for automations; it does not keep the TV on |
 | **Waiting board** | Empty-sky layout: last aircraft full-size, or a large clock with last aircraft below |

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12.1
+
+- Turn the house-centered radar on or off under Configure → Show radar
+
 ## 1.12.0
 
 - Draw a top-down aircraft silhouette next to the type line. Airline

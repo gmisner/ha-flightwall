@@ -22,6 +22,7 @@ from .const import (
     CONF_QUIET_START,
     CONF_REFRESH_SECONDS,
     CONF_SHOW_LOGOS,
+    CONF_SHOW_RADAR,
     CONF_THEME,
     CONF_TIME_FORMAT,
     CONF_TV_ENABLED,
@@ -38,6 +39,7 @@ from .const import (
     DEFAULT_QUIET_START,
     DEFAULT_REFRESH_SECONDS,
     DEFAULT_SHOW_LOGOS,
+    DEFAULT_SHOW_RADAR,
     DEFAULT_THEME,
     DEFAULT_TIME_FORMAT,
     DEFAULT_UNITS,
@@ -226,6 +228,10 @@ def _options_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
                 default=defaults.get(CONF_SHOW_LOGOS, DEFAULT_SHOW_LOGOS),
             ): bool,
             vol.Required(
+                CONF_SHOW_RADAR,
+                default=defaults.get(CONF_SHOW_RADAR, DEFAULT_SHOW_RADAR),
+            ): bool,
+            vol.Required(
                 CONF_REFRESH_SECONDS,
                 default=defaults.get(CONF_REFRESH_SECONDS, DEFAULT_REFRESH_SECONDS),
             ): selector(
@@ -359,6 +365,7 @@ def _store(
         CONF_MIN_ALTITUDE: DEFAULT_MIN_ALTITUDE,
         CONF_TIME_FORMAT: DEFAULT_TIME_FORMAT,
         CONF_SHOW_LOGOS: DEFAULT_SHOW_LOGOS,
+        CONF_SHOW_RADAR: DEFAULT_SHOW_RADAR,
         CONF_QUIET_ENABLED: DEFAULT_QUIET_ENABLED,
         CONF_QUIET_START: DEFAULT_QUIET_START,
         CONF_QUIET_END: DEFAULT_QUIET_END,

@@ -243,6 +243,7 @@ def render_board_png(
     logo_dir: Path | None = None,
     sil_dir: Path | None = None,
     home: tuple[float, float] | None = None,
+    show_radar: bool = True,
 ) -> bytes:
     """Return PNG bytes for the current flight, or the empty-sky board."""
     now = now or datetime.now(UTC)
@@ -286,6 +287,7 @@ def render_board_png(
             home,
             last_flight,
             units,
+            show_radar,
         )
     else:
         _draw_flight(
@@ -303,6 +305,7 @@ def render_board_png(
             home=home,
             flight=flight,
             units=units,
+            show_radar=show_radar,
         )
 
     if colors["grid"]:
@@ -326,6 +329,7 @@ def _draw_empty(
     home: tuple[float, float] | None = None,
     last_flight: dict[str, Any] | None = None,
     units: str = UNIT_IMPERIAL,
+    show_radar: bool = True,
 ) -> None:
     left = _s(120)
     if getattr(board, "clock_first", False) and (board.title or board.route):
@@ -375,6 +379,7 @@ def _draw_empty(
             home=home,
             flight=last_flight,
             units=units,
+            show_radar=show_radar,
         )
         return
     draw.text((left, _s(80)), board.date, font=stats_font, fill=colors["muted"])
@@ -398,6 +403,7 @@ def _draw_flight(
     home: tuple[float, float] | None = None,
     flight: dict[str, Any] | None = None,
     units: str = UNIT_IMPERIAL,
+    show_radar: bool = True,
 ) -> None:
     left = _s(120)
     if getattr(board, "show_logos", True):
@@ -464,7 +470,7 @@ def _draw_flight(
             font=stats_font,
             fill=colors["muted"],
         )
-    if home is not None and flight:
+    if show_radar and home is not None and flight:
         radar = draw_radar(
             _s(440),
             home,
@@ -588,6 +594,7 @@ def write_board_png(
     logo_dir: Path | None = None,
     sil_dir: Path | None = None,
     home: tuple[float, float] | None = None,
+    show_radar: bool = True,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(
@@ -605,5 +612,6 @@ def write_board_png(
             logo_dir=logo_dir,
             sil_dir=sil_dir,
             home=home,
+            show_radar=show_radar,
         )
     )

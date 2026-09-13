@@ -96,3 +96,28 @@ def test_radar_does_not_replace_logo_tile() -> None:
     logo_tile = without.crop((160, 160, 680, 680))
     logo_with = with_radar.crop((160, 160, 680, 680))
     assert logo_tile.tobytes() == logo_with.tobytes()
+
+
+def test_show_radar_off_skips_radar() -> None:
+    from flightwall.radar import destination
+
+    home = (34.0, -118.4)
+    lat, lon = destination(home[0], home[1], 6.76, 45)
+    flight = {**FLIGHT, "latitude": lat, "longitude": lon}
+    without = Image.open(BytesIO(render_board_png(flight, now=NOW, style=STYLE_LED)))
+    hidden = Image.open(
+        BytesIO(
+            render_board_png(
+                flight,
+                now=NOW,
+                style=STYLE_LED,
+                home=home,
+                show_radar=False,
+            )
+        )
+    )
+    shown = Image.open(
+        BytesIO(render_board_png(flight, now=NOW, style=STYLE_LED, home=home))
+    )
+    assert hidden.tobytes() == without.tobytes()
+    assert shown.tobytes() != hidden.tobytes()

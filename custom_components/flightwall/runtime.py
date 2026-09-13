@@ -38,6 +38,7 @@ from .const import (
     CONF_QUIET_START,
     CONF_REFRESH_SECONDS,
     CONF_SHOW_LOGOS,
+    CONF_SHOW_RADAR,
     CONF_THEME,
     CONF_TIME_FORMAT,
     CONF_TV_PLAYER,
@@ -51,6 +52,7 @@ from .const import (
     DEFAULT_QUIET_END,
     DEFAULT_QUIET_START,
     DEFAULT_SHOW_LOGOS,
+    DEFAULT_SHOW_RADAR,
     DEFAULT_THEME,
     DEFAULT_TIME_FORMAT,
     DEFAULT_UNITS,
@@ -153,6 +155,10 @@ class FlightwallRuntime:
     @property
     def show_logos(self) -> bool:
         return bool(self.entry.data.get(CONF_SHOW_LOGOS, DEFAULT_SHOW_LOGOS))
+
+    @property
+    def show_radar(self) -> bool:
+        return bool(self.entry.data.get(CONF_SHOW_RADAR, DEFAULT_SHOW_RADAR))
 
     @property
     def refresh_seconds(self) -> int:
@@ -483,6 +489,7 @@ class FlightwallRuntime:
             Path(self.hass.config.path("www", "flightwall", "logos")),
             Path(self.hass.config.path("www", "flightwall", "silhouettes")),
             self._home_latlon(),
+            self.show_radar,
         )
 
     async def _select_cast_source(self, reason: str) -> None:

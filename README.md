@@ -116,9 +116,9 @@ logos or city-pair routes.
    set is turned off and on, you re-arm the switch, or you call
    `flightwall.recast`. Keepalive only refreshes while Cast is showing
    the board.
-6. **Display**, **Theme**, **Units**, clock, altitude, logos, image
-   refresh, inbound off-delay, waiting-board layout, quiet hours, and
-   an optional local ADS-B URL are under
+6. **Display**, **Theme**, **Units**, clock, altitude, logos, radar,
+   image refresh, inbound off-delay, waiting-board layout, quiet hours,
+   and an optional local ADS-B URL are under
    **Settings → Devices & Services → Flight Wall → Configure**.
 
 The first instance creates `sensor.flightwall_flight`, the inbound
@@ -168,7 +168,7 @@ HACS options live in the integration Configure dialog. See
 
 | What | Where | Default |
 |---|---|---|
-| Display, theme, units, clock, logos, image refresh, inbound off-delay, waiting board, quiet hours, ADS-B | Integration → Configure | Image, LED night, imperial, 20 s refresh, 120 s inbound, last aircraft waiting |
+| Display, theme, units, clock, logos, radar, image refresh, inbound off-delay, waiting board, quiet hours, ADS-B | Integration → Configure | Image, LED night, imperial, radar on, 20 s refresh, 120 s inbound, last aircraft waiting |
 | TV is a flight board | `switch.flightwall_tv` | on after setup |
 | How long after the last aircraft | **Inbound off-delay** (inbound binary sensor debounce) | 2 minutes |
 
@@ -185,10 +185,10 @@ HACS options live in the integration Configure dialog. See
 - **Type silhouettes** sit beside the aircraft line, not in the logo
   tile. Unknown ICAO codes omit the shape. Cached under
   `/local/flightwall/silhouettes/`.
-- **The radar** is north-up with the house at the centre. It needs
-  Home Assistant’s location and the flight’s coordinates. FR24 does
-  not send a trail; a track line only appears if the flight dict
-  includes one.
+- **The radar** is north-up with the house at the centre. Turn it off
+  under Configure → **Show radar**. It needs Home Assistant’s location
+  and the flight’s coordinates. FR24 does not send a trail; a track
+  line only appears if the flight dict includes one.
 - **The LED grid softens type on purpose.** Use the plain theme on a
   large television if you want maximum sharpness.
 - **Many built-in Chromecasts cannot load a live Home Assistant
