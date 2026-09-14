@@ -458,19 +458,34 @@ def _draw_empty(
             photo_dir=photo_dir,
             show_photo=False,
         )
-        if today:
-            draw.text(
-                (_s(120), _s(1060)),
-                today,
-                font=stats_font,
-                fill=colors["muted"],
-            )
         return
     draw.text((left, _s(80)), board.date, font=stats_font, fill=colors["muted"])
     draw.text((left, _s(180)), board.clock, font=clock_font, fill=colors["ink"])
     draw.text((left, _s(460)), "WAITING FOR TRAFFIC", font=body_font, fill=colors["muted"])
     if today:
         draw.text((left, _s(560)), today, font=stats_font, fill=colors["ink"])
+
+
+def _draw_footer(
+    draw: ImageDraw.ImageDraw,
+    lines: list[str],
+    font: ImageFont.ImageFont,
+    fill: tuple[int, int, int],
+) -> None:
+    """Pin NEXT / ALSO / TODAY to the bottom of the canvas with a margin."""
+    rows = [line for line in lines if line]
+    if not rows:
+        return
+    gap = _s(18)
+    margin = _s(56)
+    heights = []
+    for line in rows:
+        box = draw.textbbox((0, 0), line, font=font)
+        heights.append(max(box[3] - box[1], _s(36)))
+    y = CANVAS[1] - margin - sum(heights) - gap * (len(rows) - 1)
+    for line, height in zip(rows, heights, strict=True):
+        draw.text((_s(120), y), line, font=font, fill=fill)
+        y += height + gap
 
 
 def _draw_flight(
@@ -553,21 +568,15 @@ def _draw_flight(
         x = left + i * (size + gap)
         color = colors["bar"] if i < board.progress else colors["bar_dim"]
         draw.rounded_rectangle((x, y, x + size, y + size), radius=_s(4), fill=color)
-    if board.next_line:
-        draw.text(
-            (_s(120), _s(980) + y0),
+    _draw_footer(
+        draw,
+        [
             board.next_line,
-            font=stats_font,
-            fill=colors["muted"],
-        )
-    nearby = getattr(board, "nearby_line", "")
-    if nearby:
-        draw.text(
-            (_s(120), _s(1048) + y0),
-            nearby,
-            font=stats_font,
-            fill=colors["muted"],
-        )
+            getattr(board, "nearby_line", "") or getattr(board, "today_line", ""),
+        ],
+        stats_font,
+        colors["muted"],
+    )
     radar_bottom = _s(80) + y0
     if show_radar and home is not None and flight:
         radar = draw_radar(

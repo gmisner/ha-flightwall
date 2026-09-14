@@ -188,3 +188,54 @@ def test_waiting_today_and_live_nearby_change_pixels() -> None:
         )
     )
     assert also.tobytes() != live.tobytes()
+
+
+def _last_changed_row(a: Image.Image, b: Image.Image) -> int:
+    for y in range(a.height - 1, -1, -1):
+        if a.crop((0, y, a.width, y + 1)).tobytes() != b.crop((0, y, a.width, y + 1)).tobytes():
+            return y
+    return -1
+
+
+def test_nearby_and_today_stay_above_bottom_edge() -> None:
+    live = Image.open(BytesIO(render_board_png(FLIGHT, now=NOW, style=STYLE_LED)))
+    also = Image.open(
+        BytesIO(
+            render_board_png(
+                FLIGHT,
+                now=NOW,
+                style=STYLE_LED,
+                nearby_flights=[{**FLIGHT, "callsign": "UAL7", "distance": 8.0}],
+            )
+        )
+    )
+    last = _last_changed_row(live, also)
+    assert last > 1600
+    assert last < 2160 - 24
+
+    waiting = Image.open(
+        BytesIO(
+            render_board_png(
+                None,
+                now=NOW,
+                last_flight=FLIGHT,
+                last_seen=SEEN,
+                style=STYLE_LED,
+            )
+        )
+    )
+    today = Image.open(
+        BytesIO(
+            render_board_png(
+                None,
+                now=NOW,
+                last_flight=FLIGHT,
+                last_seen=SEEN,
+                style=STYLE_LED,
+                overhead_today=[{"callsign": "UAL7", "route": "SFO-EWR"}],
+            )
+        )
+    )
+    last = _last_changed_row(waiting, today)
+    assert last > 1600
+    assert last < 2160 - 24

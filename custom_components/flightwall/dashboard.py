@@ -141,7 +141,6 @@ def _dashboard_config(
                         "camera_view": "auto",
                         "show_name": False,
                         "show_state": False,
-                        "aspect_ratio": "16x9",
                         "fit_mode": "contain",
                     }
                 ],

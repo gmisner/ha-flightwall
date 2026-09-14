@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.13.1
+
+- Keep NEXT / ALSO / TODAY above the bottom of the 4K board, and let
+  the dashboard picture card shrink to the view so those lines are not
+  clipped under the Home Assistant header
+
 ## 1.13.0
 
 - Draw a trail on the radar from positions collected while the same
