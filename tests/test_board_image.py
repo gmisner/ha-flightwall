@@ -239,3 +239,36 @@ def test_nearby_and_today_stay_above_bottom_edge() -> None:
     last = _last_changed_row(waiting, today)
     assert last > 1600
     assert last < 2160 - 24
+
+
+def _first_changed_col(a: Image.Image, b: Image.Image, y: int) -> int:
+    for x in range(a.width):
+        if a.getpixel((x, y)) != b.getpixel((x, y)):
+            return x
+    return -1
+
+
+def _last_changed_col(a: Image.Image, b: Image.Image, y: int) -> int:
+    for x in range(a.width - 1, -1, -1):
+        if a.getpixel((x, y)) != b.getpixel((x, y)):
+            return x
+    return -1
+
+
+def test_nearby_footer_is_centered() -> None:
+    live = Image.open(BytesIO(render_board_png(FLIGHT, now=NOW, style=STYLE_LED)))
+    also = Image.open(
+        BytesIO(
+            render_board_png(
+                FLIGHT,
+                now=NOW,
+                style=STYLE_LED,
+                nearby_flights=[{**FLIGHT, "callsign": "UAL7", "distance": 8.0}],
+            )
+        )
+    )
+    y = _last_changed_row(live, also)
+    left = _first_changed_col(live, also, y)
+    right = _last_changed_col(live, also, y)
+    assert left > 400
+    assert abs((left + right) / 2 - 1920) < 240

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.13.3
+
+- Center NEXT / ALSO / TODAY on the board so a long nearby list does
+  not sit against the right edge
+
 ## 1.13.2
 
 - Show the dashboard board in an iframe that fits the remaining view

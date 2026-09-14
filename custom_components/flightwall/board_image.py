@@ -472,19 +472,30 @@ def _draw_footer(
     font: ImageFont.ImageFont,
     fill: tuple[int, int, int],
 ) -> None:
-    """Pin NEXT / ALSO / TODAY to the bottom of the canvas with a margin."""
+    """Pin NEXT / ALSO / TODAY to the bottom, centered on the canvas."""
     rows = [line for line in lines if line]
     if not rows:
         return
     gap = _s(18)
     margin = _s(56)
-    heights = []
+    side = _s(80)
+    max_width = CANVAS[0] - 2 * side
+    fitted: list[str] = []
+    heights: list[int] = []
     for line in rows:
-        box = draw.textbbox((0, 0), line, font=font)
+        text = line
+        while text and (draw.textbbox((0, 0), text, font=font)[2] > max_width):
+            text = text[:-1].rstrip(" ·")
+        if text != line and text:
+            text = text.rstrip(" ·") + "…"
+        fitted.append(text)
+        box = draw.textbbox((0, 0), text, font=font)
         heights.append(max(box[3] - box[1], _s(36)))
-    y = CANVAS[1] - margin - sum(heights) - gap * (len(rows) - 1)
-    for line, height in zip(rows, heights, strict=True):
-        draw.text((_s(120), y), line, font=font, fill=fill)
+    y = CANVAS[1] - margin - sum(heights) - gap * (len(fitted) - 1)
+    for line, height in zip(fitted, heights, strict=True):
+        box = draw.textbbox((0, 0), line, font=font)
+        x = (CANVAS[0] - (box[2] - box[0])) // 2
+        draw.text((x, y), line, font=font, fill=fill)
         y += height + gap
 
 
