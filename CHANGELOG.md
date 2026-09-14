@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.13.2
+
+- Show the dashboard board in an iframe that fits the remaining view
+  (`object-fit: contain`). The camera card was still cropping NEXT /
+  ALSO / TODAY under the Home Assistant header even with `fit_mode:
+  contain`
+
 ## 1.13.1
 
 - Keep NEXT / ALSO / TODAY above the bottom of the 4K board, and let

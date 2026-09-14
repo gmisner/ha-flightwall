@@ -136,12 +136,8 @@ def _dashboard_config(
                 "type": "panel",
                 "cards": [
                     {
-                        "type": "picture-entity",
-                        "entity": camera_entity,
-                        "camera_view": "auto",
-                        "show_name": False,
-                        "show_state": False,
-                        "fit_mode": "contain",
+                        "type": "iframe",
+                        "url": "/local/flightwall/board.html",
                     }
                 ],
             },
