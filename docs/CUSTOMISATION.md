@@ -12,7 +12,14 @@
 | **Minimum altitude** | Ignore aircraft at or below this (default 500 ft) |
 | **Clock** | Follow units, or force 12-hour / 24-hour |
 | **Show airline marks** | Off hides the logo column and does not fetch Kiwi CDN images |
-| **Show radar** | Off hides the north-up radar (house at the centre, aircraft on range rings) |
+| **Show radar** | Off hides the north-up radar (house at the centre, aircraft on range rings, trail while the same flight is selected) |
+| **Show type silhouette** | Off hides the top-down shape beside the aircraft type line |
+| **Show aircraft photo** | Off by default. When on, draws a FR24 photo under the radar if the flight has a photo URL |
+| **Night theme after sunset** | LED / plain / amber switch to Night dim when `sun.sun` is below the horizon. Split-flap stays mechanical |
+| **Airliners only** | Keep flights with an airline IATA/ICAO code or a typical airline callsign |
+| **Hide helicopters** | Drop common helicopter ICAO types |
+| **Hide military types** | Drop common military ICAO types |
+| **Minimum ground speed** | Ignore aircraft slower than this (knots). 0 keeps everyone |
 | **Image refresh** | How often to redraw and recast the still image while Cast is showing the board (5–300 seconds, default 20). Aircraft changes still recast immediately |
 | **Inbound off-delay** | How long `binary_sensor.flightwall_inbound` stays on after the sky goes empty (15–600 seconds, default 120). This is a debounce for automations; it does not keep the TV on |
 | **Waiting board** | Empty-sky layout: last aircraft full-size, or a large clock with last aircraft below |
@@ -21,8 +28,21 @@
 | **Local ADS-B URL** | Optional `http://host:8080/data/aircraft.json` from readsb / tar1090. When set, it is polled every 10 seconds and used instead of Flightradar24 |
 
 TV walkthrough: [TV.md](TV.md). A tablet should open the Flightwall
-dashboard or `/local/flightwall/splitflap.html` (copied by the
-integration). The YAML package further down is legacy only.
+dashboard (`/flight-wall/board` is the same PNG as the TV) or
+`/local/flightwall/splitflap.html` (copied by the integration). The YAML
+package further down is legacy only.
+
+## Skip, pin, and filters
+
+On HACS:
+
+- **Skip** (`flightwall.skip` or `button.flightwall_skip`) hides the
+  current callsign for five minutes and shows the next aircraft in
+  range.
+- **Pin** keeps that callsign on the board while it remains in the
+  ranked list. **Unpin** returns to highest elevation.
+- Filters (airliners only, hide helicopters, hide military, minimum
+  speed) apply before ranking.
 
 ## Behaviour
 

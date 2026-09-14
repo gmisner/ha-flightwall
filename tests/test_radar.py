@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from flightwall.const import UNIT_IMPERIAL
-from flightwall.radar import bearing_deg, destination, draw_radar, flight_latlon
+from flightwall.radar import (
+    bearing_deg,
+    destination,
+    draw_radar,
+    flight_latlon,
+    update_trail,
+)
 
 HOME = (34.0, -118.4)
 
@@ -35,3 +41,17 @@ def test_draw_radar_is_square_and_visible() -> None:
     assert image is not None
     assert image.size == (400, 400)
     assert image.getchannel("A").getextrema()[1] > 0
+
+
+def test_update_trail_caps_and_skips_tiny_moves() -> None:
+    trail = update_trail([], 34.0, -118.4)
+    same = update_trail(trail, 34.0, -118.4)
+    assert len(same) == 1
+    moved = destination(34.0, -118.4, 0.5, 90)
+    longer = update_trail(same, moved[0], moved[1])
+    assert len(longer) == 2
+    many = []
+    for i in range(50):
+        point = destination(34.0, -118.4, i * 0.2, 90)
+        many = update_trail(many, point[0], point[1], max_points=40)
+    assert len(many) == 40

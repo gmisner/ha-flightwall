@@ -121,3 +121,70 @@ def test_show_radar_off_skips_radar() -> None:
     )
     assert hidden.tobytes() == without.tobytes()
     assert shown.tobytes() != hidden.tobytes()
+
+
+def test_show_silhouette_off_skips_shape() -> None:
+    _SIL_CACHE.clear()
+    without = Image.open(
+        BytesIO(
+            render_board_png(
+                FLIGHT,
+                now=NOW,
+                style=STYLE_LED,
+                show_logos=False,
+                show_silhouette=False,
+            )
+        )
+    )
+    hidden = Image.open(
+        BytesIO(
+            render_board_png(
+                FLIGHT,
+                now=NOW,
+                style=STYLE_LED,
+                show_logos=False,
+                sil_dir=SIL_DIR,
+                show_silhouette=False,
+            )
+        )
+    )
+    shown = Image.open(
+        BytesIO(
+            render_board_png(
+                FLIGHT,
+                now=NOW,
+                style=STYLE_LED,
+                show_logos=False,
+                sil_dir=SIL_DIR,
+            )
+        )
+    )
+    assert hidden.tobytes() == without.tobytes()
+    assert shown.tobytes() != hidden.tobytes()
+
+
+def test_waiting_today_and_live_nearby_change_pixels() -> None:
+    empty = Image.open(BytesIO(render_board_png(None, now=NOW, style=STYLE_LED)))
+    today = Image.open(
+        BytesIO(
+            render_board_png(
+                None,
+                now=NOW,
+                style=STYLE_LED,
+                overhead_today=[{"callsign": "AAL123", "route": "LAX-JFK"}],
+            )
+        )
+    )
+    assert today.tobytes() != empty.tobytes()
+    live = Image.open(BytesIO(render_board_png(FLIGHT, now=NOW, style=STYLE_LED)))
+    also = Image.open(
+        BytesIO(
+            render_board_png(
+                FLIGHT,
+                now=NOW,
+                style=STYLE_LED,
+                nearby_flights=[{**FLIGHT, "callsign": "UAL7", "distance": 8.0}],
+            )
+        )
+    )
+    assert also.tobytes() != live.tobytes()

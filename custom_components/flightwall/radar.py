@@ -11,6 +11,8 @@ from .adsb import haversine_km
 from .const import UNIT_METRIC
 
 KM_PER_MI = 1.609344
+TRAIL_MAX = 40
+TRAIL_MIN_KM = 0.12
 RINGS_MI = (2.5, 5.0, 10.0)
 RINGS_KM = (4.0, 8.0, 16.0)
 
@@ -65,6 +67,25 @@ def bearing_deg(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     x = sin(dlon) * cos(phi2)
     y = cos(phi1) * sin(phi2) - sin(phi1) * cos(phi2) * cos(dlon)
     return (degrees(atan2(x, y)) + 360) % 360
+
+
+def update_trail(
+    points: list[tuple[float, float]] | None,
+    lat: float,
+    lon: float,
+    *,
+    max_points: int = TRAIL_MAX,
+    min_km: float = TRAIL_MIN_KM,
+) -> list[tuple[float, float]]:
+    """Append a point unless it is almost the same as the last one."""
+    trail = list(points or [])
+    if trail:
+        last_lat, last_lon = trail[-1]
+        if haversine_km(last_lat, last_lon, lat, lon) < min_km:
+            trail[-1] = (lat, lon)
+            return trail
+    trail.append((lat, lon))
+    return trail[-max_points:]
 
 
 def destination(lat: float, lon: float, km: float, bearing: float) -> tuple[float, float]:

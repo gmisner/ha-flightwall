@@ -125,6 +125,51 @@ def vertical_rate_label(flight: dict[str, Any]) -> str:
     return ""
 
 
+def today_line(overhead: list[dict[str, Any]] | None, limit: int = 8) -> str:
+    """Compact TODAY strip for the waiting board."""
+    bits: list[str] = []
+    for item in overhead or []:
+        callsign = clean(item.get("callsign")).upper()
+        if not callsign:
+            continue
+        route = clean(item.get("route")).upper()
+        if route and route != callsign:
+            bits.append(f"{callsign} {route}")
+        else:
+            bits.append(callsign)
+        if len(bits) >= limit:
+            break
+    if not bits:
+        return ""
+    return "TODAY  " + "  ·  ".join(bits)
+
+
+def nearby_line(
+    flights: list[dict[str, Any]] | None,
+    units: str,
+    limit: int = 5,
+) -> str:
+    """Other aircraft in range for the lower third."""
+    metric = units == UNIT_METRIC
+    bits: list[str] = []
+    for flight in flights or []:
+        callsign = _callsign(flight, "")
+        if not callsign:
+            continue
+        dist = ""
+        try:
+            km = float(flight.get("distance"))
+            dist = f"{km:.1f} KM" if metric else f"{km * 0.621371:.1f} MI"
+        except (TypeError, ValueError):
+            dist = ""
+        bits.append(f"{callsign.upper()} {dist}".strip())
+        if len(bits) >= limit:
+            break
+    if not bits:
+        return ""
+    return "ALSO  " + "  ·  ".join(bits)
+
+
 def ident_of(flight: dict[str, Any]) -> str:
     bits: list[str] = []
     squawk = clean(flight.get("squawk"))
@@ -181,6 +226,8 @@ class BoardCopy:
     aircraft_code: str
     clock_first: bool
     flap_rows: list[tuple[str, str]]
+    today_line: str
+    nearby_line: str
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -282,6 +329,15 @@ def describe_flight(
     }
 
 
+def _extra_flap_rows(today: str, nearby: str) -> list[tuple[str, str]]:
+    rows: list[tuple[str, str]] = []
+    if today:
+        rows.append(("TODAY", clip(today.removeprefix("TODAY").strip(), 16)))
+    if nearby:
+        rows.append(("ALSO", clip(nearby.removeprefix("ALSO").strip(), 16)))
+    return rows
+
+
 def build_board(
     flight: dict[str, Any] | None,
     now: datetime | None = None,
@@ -292,10 +348,14 @@ def build_board(
     time_format: str = TIME_FOLLOW_UNITS,
     show_logos: bool = True,
     waiting_layout: str = WAITING_LAST,
+    overhead_today: list[dict[str, Any]] | None = None,
+    nearby_flights: list[dict[str, Any]] | None = None,
 ) -> BoardCopy:
     now = now or datetime.now(UTC)
     date = f"{now.strftime('%a')} {now.day} {now.strftime('%b')}".upper()
     clock = clock_text(now, units, time_format)
+    today = today_line(overhead_today) if not flight else ""
+    nearby = nearby_line(nearby_flights, units) if flight else ""
     if not flight:
         last_line = ""
         last_ago = ""
@@ -359,7 +419,9 @@ def build_board(
             ident=shown.get("ident", ""),
             aircraft_code=shown.get("aircraft_code", ""),
             clock_first=waiting_layout == WAITING_CLOCK,
-            flap_rows=flap_rows,
+            flap_rows=flap_rows + _extra_flap_rows(today, nearby),
+            today_line=today,
+            nearby_line=nearby,
         )
 
     shown = describe_flight(
@@ -404,5 +466,8 @@ def build_board(
             ("ESTIMATED", shown["estimated"]),
             ("ALTITUDE", shown["stat_parts"][0] if shown["stat_parts"] else ""),
             ("AIRSPEED", shown["stat_parts"][1] if len(shown["stat_parts"]) > 1 else ""),
+            *_extra_flap_rows(today, nearby),
         ],
+        today_line=today,
+        nearby_line=nearby,
     )

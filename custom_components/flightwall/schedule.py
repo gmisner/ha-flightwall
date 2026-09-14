@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime, time
 
+from .const import STYLE_NIGHT, STYLE_SPLITFLAP
+
 
 def parse_clock(value: str | None, fallback: str) -> time:
     raw = (value or fallback).strip()
@@ -41,3 +43,17 @@ def in_quiet_hours(
     if begin < finish:
         return begin <= current < finish
     return current >= begin or current < finish
+
+
+def effective_theme(
+    style: str,
+    *,
+    auto_night: bool,
+    sun_below: bool,
+) -> str:
+    """Dim LED/plain/amber to night after sunset. Split-flap stays mechanical."""
+    if not auto_night or not sun_below:
+        return style
+    if style == STYLE_SPLITFLAP:
+        return style
+    return STYLE_NIGHT

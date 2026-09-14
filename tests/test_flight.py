@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flightwall.flight import callsign_of, pick_best_flight, rank_flights
+from flightwall.flight import callsign_of, pick_best_flight, pick_display, rank_flights
 
 
 def test_rank_flights_prefers_higher_elevation() -> None:
@@ -35,3 +35,25 @@ def test_callsign_of() -> None:
     assert callsign_of({"callsign": "AAL123"}) == "AAL123"
     assert callsign_of({"callsign": "None"}) == "none"
     assert callsign_of({"callsign": ""}) == "none"
+
+
+def test_pick_display_skip_and_pin() -> None:
+    ranked = [
+        {"callsign": "AAL1", "altitude": 2000, "distance": 1},
+        {"callsign": "UAL2", "altitude": 3000, "distance": 2},
+        {"callsign": "SWA3", "altitude": 4000, "distance": 3},
+    ]
+    selected, nxt, nearby = pick_display(ranked, skipped={"AAL1"})
+    assert selected["callsign"] == "UAL2"
+    assert nxt["callsign"] == "SWA3"
+    assert [f["callsign"] for f in nearby] == ["SWA3"]
+
+    pinned, nxt, nearby = pick_display(ranked, pinned="SWA3")
+    assert pinned["callsign"] == "SWA3"
+    assert nxt["callsign"] == "AAL1"
+    assert [f["callsign"] for f in nearby] == ["AAL1", "UAL2"]
+
+    empty, nxt, nearby = pick_display(ranked, skipped={"AAL1", "UAL2", "SWA3"})
+    assert empty is None
+    assert nxt is None
+    assert nearby == []

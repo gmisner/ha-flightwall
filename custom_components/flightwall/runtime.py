@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -28,31 +29,45 @@ from .const import (
     ADSB_POLL,
     BOARD_PNG_NAME,
     CONF_ADSB_URL,
+    CONF_AIRLINERS_ONLY,
+    CONF_AUTO_NIGHT,
     CONF_BOARD_STYLE,
     CONF_DISPLAY_MODE,
     CONF_FLIGHTS_ENTITY,
+    CONF_HIDE_HELICOPTERS,
+    CONF_HIDE_MILITARY,
     CONF_INBOUND_DELAY,
     CONF_MIN_ALTITUDE,
+    CONF_MIN_SPEED,
     CONF_QUIET_ENABLED,
     CONF_QUIET_END,
     CONF_QUIET_START,
     CONF_REFRESH_SECONDS,
     CONF_SHOW_LOGOS,
+    CONF_SHOW_PHOTO,
     CONF_SHOW_RADAR,
+    CONF_SHOW_SILHOUETTE,
     CONF_THEME,
     CONF_TIME_FORMAT,
     CONF_TV_PLAYER,
     CONF_TV_POWER,
     CONF_UNITS,
     CONF_WAITING_LAYOUT,
+    DEFAULT_AIRLINERS_ONLY,
+    DEFAULT_AUTO_NIGHT,
     DEFAULT_DISPLAY_MODE,
     DEFAULT_FLIGHTS_ENTITY,
+    DEFAULT_HIDE_HELICOPTERS,
+    DEFAULT_HIDE_MILITARY,
     DEFAULT_MIN_ALTITUDE,
+    DEFAULT_MIN_SPEED,
     DEFAULT_QUIET_ENABLED,
     DEFAULT_QUIET_END,
     DEFAULT_QUIET_START,
     DEFAULT_SHOW_LOGOS,
+    DEFAULT_SHOW_PHOTO,
     DEFAULT_SHOW_RADAR,
+    DEFAULT_SHOW_SILHOUETTE,
     DEFAULT_THEME,
     DEFAULT_TIME_FORMAT,
     DEFAULT_UNITS,
@@ -60,6 +75,7 @@ from .const import (
     DISPLAY_LIVE,
     DOMAIN,
     inbound_delay,
+    SKIP_SECONDS,
     THEME_HA,
     TV_CAST_SOURCES,
     TV_POWER_ON_DELAY,
@@ -67,9 +83,11 @@ from .const import (
     keepalive_interval,
 )
 from .dashboard import dashboard_path_for
-from .flight import callsign_of, rank_flights
+from .filters import filter_flights
+from .flight import callsign_of, pick_display, rank_flights
 from .persist import dump_state, load_state, merge_overhead
-from .schedule import in_quiet_hours
+from .radar import flight_latlon, update_trail
+from .schedule import effective_theme, in_quiet_hours
 from .tv import (
     RECAST_REASON,
     TAKEOVER_REASONS,
@@ -96,6 +114,7 @@ class FlightwallRuntime:
         self.last_flight: dict[str, Any] | None = None
         self.last_seen: datetime | None = None
         self.overhead_today: list[dict[str, Any]] = []
+        self.nearby_flights: list[dict[str, Any]] = []
         self.inbound = False
         self.tv_enabled = False
         self._live_failed = False
@@ -108,6 +127,10 @@ class FlightwallRuntime:
         self._save_unsub: CALLBACK_TYPE | None = None
         self._adsb_attributes: dict[str, Any] | None = None
         self._store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}")
+        self._trail: list[tuple[float, float]] = []
+        self._skipped: dict[str, float] = {}
+        self._pinned: str | None = None
+        self._write_lock = asyncio.Lock()
 
     @property
     def flights_entity(self) -> str:
@@ -132,9 +155,17 @@ class FlightwallRuntime:
         return self.entry.data.get(CONF_UNITS, DEFAULT_UNITS)
 
     @property
-    def board_style(self) -> str:
+    def configured_style(self) -> str:
         return self.entry.data.get(CONF_THEME) or self.entry.data.get(
             CONF_BOARD_STYLE, DEFAULT_THEME
+        )
+
+    @property
+    def board_style(self) -> str:
+        return effective_theme(
+            self.configured_style,
+            auto_night=self.auto_night,
+            sun_below=self._sun_below(),
         )
 
     @property
@@ -159,6 +190,41 @@ class FlightwallRuntime:
     @property
     def show_radar(self) -> bool:
         return bool(self.entry.data.get(CONF_SHOW_RADAR, DEFAULT_SHOW_RADAR))
+
+    @property
+    def show_silhouette(self) -> bool:
+        return bool(self.entry.data.get(CONF_SHOW_SILHOUETTE, DEFAULT_SHOW_SILHOUETTE))
+
+    @property
+    def show_photo(self) -> bool:
+        return bool(self.entry.data.get(CONF_SHOW_PHOTO, DEFAULT_SHOW_PHOTO))
+
+    @property
+    def auto_night(self) -> bool:
+        return bool(self.entry.data.get(CONF_AUTO_NIGHT, DEFAULT_AUTO_NIGHT))
+
+    @property
+    def airliners_only(self) -> bool:
+        return bool(self.entry.data.get(CONF_AIRLINERS_ONLY, DEFAULT_AIRLINERS_ONLY))
+
+    @property
+    def hide_helicopters(self) -> bool:
+        return bool(self.entry.data.get(CONF_HIDE_HELICOPTERS, DEFAULT_HIDE_HELICOPTERS))
+
+    @property
+    def hide_military(self) -> bool:
+        return bool(self.entry.data.get(CONF_HIDE_MILITARY, DEFAULT_HIDE_MILITARY))
+
+    @property
+    def min_speed_kt(self) -> float:
+        try:
+            return float(self.entry.data.get(CONF_MIN_SPEED, DEFAULT_MIN_SPEED))
+        except (TypeError, ValueError):
+            return float(DEFAULT_MIN_SPEED)
+
+    @property
+    def pinned(self) -> str | None:
+        return self._pinned
 
     @property
     def refresh_seconds(self) -> int:
@@ -204,6 +270,8 @@ class FlightwallRuntime:
             time_format=self.time_format,
             show_logos=self.show_logos,
             waiting_layout=self.waiting_layout,
+            overhead_today=self.overhead_today,
+            nearby_flights=self.nearby_flights,
         ).as_dict()
 
     def async_add_listener(self, update: Callable[[], None]) -> Callable[[], None]:
@@ -271,6 +339,9 @@ class FlightwallRuntime:
                 keepalive_interval(self.entry.data.get(CONF_REFRESH_SECONDS)),
             )
         )
+        self._unsubs.append(
+            async_track_state_change_event(self.hass, ["sun.sun"], self._sun_changed)
+        )
 
     async def async_unload(self) -> None:
         for unsub in self._unsubs:
@@ -306,6 +377,15 @@ class FlightwallRuntime:
     def _keepalive(self, _now: datetime) -> None:
         self._notify()
         self.hass.add_job(self.async_cast(reason="keep"))
+
+    @callback
+    def _sun_changed(self, _event: Event) -> None:
+        if self.auto_night:
+            self.hass.add_job(self.async_cast(reason="keep"))
+
+    def _sun_below(self) -> bool:
+        state = self.hass.states.get("sun.sun")
+        return state is not None and state.state == "below_horizon"
 
     def _local_now(self) -> datetime:
         try:
@@ -348,28 +428,56 @@ class FlightwallRuntime:
             state = self.hass.states.get(self.flights_entity)
             if state is not None:
                 attrs = dict(state.attributes)
-        flights = flights_from_attributes(
-            attrs,
-            float(self.hass.config.latitude or 0),
-            float(self.hass.config.longitude or 0),
+        flights = filter_flights(
+            flights_from_attributes(
+                attrs,
+                float(self.hass.config.latitude or 0),
+                float(self.hass.config.longitude or 0),
+            ),
+            airliners_only=self.airliners_only,
+            hide_helicopters=self.hide_helicopters,
+            hide_military=self.hide_military,
+            min_speed_kt=self.min_speed_kt,
         )
 
         self._prune_overhead()
+        now_m = time.monotonic()
+        self._skipped = {
+            callsign: expires
+            for callsign, expires in self._skipped.items()
+            if expires > now_m
+        }
         ranked = rank_flights(flights, self.min_altitude_ft)
-        selected = ranked[0] if ranked else None
-        nxt = ranked[1] if len(ranked) > 1 else None
+        selected, nxt, nearby = pick_display(
+            ranked,
+            skipped=set(self._skipped),
+            pinned=self._pinned,
+        )
+        new_cs = callsign_of(selected)
+        if new_cs != self.callsign:
+            self._trail = []
         if selected is not None:
+            selected = dict(selected)
+            pair = flight_latlon(selected)
+            if pair is not None:
+                self._trail = update_trail(self._trail, pair[0], pair[1])
+            if self._trail:
+                selected["trail"] = list(self._trail)
             self.last_flight = dict(selected)
             self.last_seen = self._local_now()
             self.overhead_today = merge_overhead(
                 self.overhead_today, selected, self.last_seen
             )
             self._schedule_save()
+        else:
+            self._trail = []
         self.flight = selected
         self.next_flight = nxt
-        self.callsign = callsign_of(selected)
+        self.nearby_flights = nearby
+        self.callsign = new_cs
         self._set_inbound(len(flights) > 0)
         self._notify()
+        self.hass.add_job(self._write_board_image())
 
     @callback
     def _inbound_off(self, _now: datetime) -> None:
@@ -468,13 +576,22 @@ class FlightwallRuntime:
     def _board_path(self) -> Path:
         return Path(self.hass.config.path("www")) / BOARD_PNG_NAME
 
+    @property
+    def board_png_path(self) -> Path:
+        return self._board_path()
+
     def _board_url(self) -> str:
         base = get_url(self.hass, prefer_external=False, allow_internal=True)
         return f"{base.rstrip('/')}/local/{BOARD_PNG_NAME}?t={int(datetime.now().timestamp())}"
 
     async def _write_board_image(self) -> None:
-        await self.hass.async_add_executor_job(
-            write_board_png,
+        async with self._write_lock:
+            await self.hass.async_add_executor_job(self._render_board_png)
+        self._notify()
+
+    def _render_board_png(self) -> None:
+        www = Path(self.hass.config.path("www", "flightwall"))
+        write_board_png(
             self._board_path(),
             self.flight,
             self.units,
@@ -486,11 +603,36 @@ class FlightwallRuntime:
             self.time_format,
             self.show_logos,
             self.waiting_layout,
-            Path(self.hass.config.path("www", "flightwall", "logos")),
-            Path(self.hass.config.path("www", "flightwall", "silhouettes")),
+            www / "logos",
+            www / "silhouettes",
             self._home_latlon(),
             self.show_radar,
+            show_silhouette=self.show_silhouette,
+            photo_dir=www / "photos",
+            show_photo=self.show_photo,
+            overhead_today=self.overhead_today,
+            nearby_flights=self.nearby_flights,
         )
+
+    async def async_skip(self) -> None:
+        if self.callsign != "none":
+            self._skipped[self.callsign] = time.monotonic() + SKIP_SECONDS
+            if self._pinned == self.callsign:
+                self._pinned = None
+        self._refresh_flight()
+        await self.async_cast(reason="flight")
+
+    async def async_pin(self) -> None:
+        if self.callsign != "none":
+            self._pinned = self.callsign
+        self._notify()
+
+    async def async_unpin(self) -> None:
+        if self._pinned is None:
+            return
+        self._pinned = None
+        self._refresh_flight()
+        await self.async_cast(reason="flight")
 
     async def _select_cast_source(self, reason: str) -> None:
         if not self.tv_power or not should_select_cast(reason):
@@ -538,25 +680,6 @@ class FlightwallRuntime:
 
     async def async_cast(self, reason: str, delay: bool = False) -> None:
         """Show the board on the Chromecast."""
-        if not self.tv_player:
-            return
-        if reason != "recast" and not self.tv_enabled:
-            return
-        if reason != "armed" and not self._tv_is_on():
-            return
-        if not should_attempt_cast(
-            reason=reason,
-            power_on=self._tv_is_on(),
-            player_state=self._player_state(),
-        ):
-            _LOGGER.debug("Skip Flight Wall cast (%s); TV or Cast is off", reason)
-            return
-        if reason != RECAST_REASON and self._in_quiet_hours():
-            _LOGGER.debug("Skip Flight Wall cast (%s); quiet hours", reason)
-            return
-        if reason not in TAKEOVER_REASONS and not self._should_refresh_board():
-            _LOGGER.debug("Skip Flight Wall cast (%s); TV is on another source", reason)
-            return
         self.last_cast_reason = reason
         self.last_cast_error = None
 
@@ -576,6 +699,32 @@ class FlightwallRuntime:
 
         try:
             await self._write_board_image()
+        except OSError as err:
+            self.last_cast_error = str(err)
+            _LOGGER.warning("Could not write Flight Wall image (%s): %s", reason, err)
+            return
+
+        if not self.tv_player:
+            return
+        if reason != "recast" and not self.tv_enabled:
+            return
+        if reason != "armed" and not self._tv_is_on():
+            return
+        if not should_attempt_cast(
+            reason=reason,
+            power_on=self._tv_is_on(),
+            player_state=self._player_state(),
+        ):
+            _LOGGER.debug("Skip Flight Wall cast (%s); TV or Cast is off", reason)
+            return
+        if reason != RECAST_REASON and self._in_quiet_hours():
+            _LOGGER.debug("Skip Flight Wall cast (%s); quiet hours", reason)
+            return
+        if reason not in TAKEOVER_REASONS and not self._should_refresh_board():
+            _LOGGER.debug("Skip Flight Wall cast (%s); TV is on another source", reason)
+            return
+
+        try:
             await self._select_cast_source(reason)
             use_live = self.display_mode == DISPLAY_LIVE and not self._live_failed
             if use_live:

@@ -37,6 +37,8 @@ BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 {{ '█' * (b.progress | int(0)) }}{{ '░' * (32 - (b.progress | int(0))) }}
 
 {{ b.next_line }}
+
+{{ b.nearby_line }}
 {% else %}
 {% if b.clock_first %}
 # {{ b.clock }}
@@ -52,6 +54,8 @@ BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 {{ b.cities }}
 
 {{ b.last_ago }}
+
+{{ b.today_line }}
 {% else %}
 ### WAITING FOR TRAFFIC
 
@@ -78,6 +82,11 @@ BOARD_MARKDOWN = """{% set b = state_attr('__FLIGHT_ENTITY__','board') or {} %}
 {{ '█' * (b.progress | int(0)) }}{{ '░' * (32 - (b.progress | int(0))) }}
 
 {{ b.next_line }}
+
+{{ b.today_line }}
+{% else %}
+
+{{ b.today_line }}
 {% endif %}
 {% endif %}
 {% endif %}
@@ -104,7 +113,19 @@ def flight_entity_for(hass: HomeAssistant, entry: Any) -> str:
     return entity_id or DEFAULT_FLIGHT_ENTITY
 
 
-def _dashboard_config(theme: str, flight_entity: str) -> dict[str, Any]:
+def board_camera_for(hass: HomeAssistant, entry: Any) -> str:
+    from homeassistant.helpers import entity_registry as er
+
+    entity_id = er.async_get(hass).async_get_entity_id(
+        "camera", DOMAIN, f"{entry.entry_id}_board"
+    )
+    return entity_id or "camera.flightwall_board"
+
+
+def _dashboard_config(
+    theme: str, flight_entity: str, camera_entity: str
+) -> dict[str, Any]:
+    markdown = BOARD_MARKDOWN.replace("__FLIGHT_ENTITY__", flight_entity)
     return {
         "title": "Flightwall",
         "views": [
@@ -112,16 +133,31 @@ def _dashboard_config(theme: str, flight_entity: str) -> dict[str, Any]:
                 "title": "Board",
                 "path": VIEW_PATH,
                 "theme": theme,
+                "type": "panel",
+                "cards": [
+                    {
+                        "type": "picture-entity",
+                        "entity": camera_entity,
+                        "camera_view": "auto",
+                        "show_name": False,
+                        "show_state": False,
+                        "aspect_ratio": "16x9",
+                        "fit_mode": "contain",
+                    }
+                ],
+            },
+            {
+                "title": "Text",
+                "path": "text",
+                "theme": theme,
                 "type": "masonry",
                 "cards": [
                     {
                         "type": "markdown",
-                        "content": BOARD_MARKDOWN.replace(
-                            "__FLIGHT_ENTITY__", flight_entity
-                        ),
+                        "content": markdown,
                     }
                 ],
-            }
+            },
         ],
     }
 
@@ -164,10 +200,12 @@ async def async_ensure_dashboard(
     theme: str | None = None,
     path: str | None = None,
     flight_entity: str | None = None,
+    camera_entity: str | None = None,
 ) -> None:
     """Create or refresh a Flightwall storage dashboard."""
     path = path or DASHBOARD_PATH
     flight_entity = flight_entity or DEFAULT_FLIGHT_ENTITY
+    camera_entity = camera_entity or "camera.flightwall_board"
     ll = _lovelace_data(hass)
     dashboards = getattr(ll, "dashboards", None) if ll is not None else None
     if ll is None or dashboards is None:
@@ -216,7 +254,7 @@ async def async_ensure_dashboard(
     if save is None:
         return
     try:
-        await save(_dashboard_config(theme or THEME_HA["led"], flight_entity))
+        await save(_dashboard_config(theme or THEME_HA["led"], flight_entity, camera_entity))
     except HomeAssistantError as err:
         _LOGGER.warning("Could not save the Flightwall dashboard: %s", err)
         return

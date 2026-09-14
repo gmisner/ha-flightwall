@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flightwall.schedule import in_quiet_hours
+from flightwall.const import STYLE_LED, STYLE_NIGHT, STYLE_SPLITFLAP
+from flightwall.schedule import effective_theme, in_quiet_hours
 
 
 def _at(hour: int, minute: int = 0) -> datetime:
@@ -30,3 +31,13 @@ def test_quiet_hours_same_day_window() -> None:
     assert in_quiet_hours(_at(2), **kwargs)
     assert not in_quiet_hours(_at(0, 30), **kwargs)
     assert not in_quiet_hours(_at(5), **kwargs)
+
+
+def test_effective_theme_auto_night() -> None:
+    assert effective_theme(STYLE_LED, auto_night=False, sun_below=True) == STYLE_LED
+    assert effective_theme(STYLE_LED, auto_night=True, sun_below=False) == STYLE_LED
+    assert effective_theme(STYLE_LED, auto_night=True, sun_below=True) == STYLE_NIGHT
+    assert (
+        effective_theme(STYLE_SPLITFLAP, auto_night=True, sun_below=True)
+        == STYLE_SPLITFLAP
+    )

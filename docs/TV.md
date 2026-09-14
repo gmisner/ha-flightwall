@@ -28,7 +28,9 @@ automation paste. Add the integration, pick the two TV entities, leave
 `/local/flightwall-board.png` and plays that image on the Chromecast
 when the TV comes on. It refreshes on the **Image refresh** interval
 under Configure (default 20 seconds) while Cast is showing the board,
-and immediately when the selected aircraft changes.
+and immediately when the selected aircraft changes. The same PNG is
+written for the Flightwall dashboard (`camera.flightwall_board`) even
+when the set is off.
 If someone switches the set to another app — Netflix, HDMI, the TV's
 home screen — Flight Wall does not take over again until the TV is
 turned off and on, you re-arm the switch, or you call the

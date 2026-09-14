@@ -1,3 +1,12 @@
 recast:
   name: Show board on TV
   description: Switch the television to Cast and show the current Flight Wall board. Does nothing if the set is off.
+skip:
+  name: Skip this aircraft
+  description: Hide the current aircraft for five minutes and show the next one in range.
+pin:
+  name: Pin this aircraft
+  description: Keep the current aircraft on the board while it stays in range.
+unpin:
+  name: Unpin aircraft
+  description: Clear a pin and go back to the highest-elevation aircraft.

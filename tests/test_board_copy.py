@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from flightwall.board_copy import build_board, clock_text, format_stats, progress_of
+from flightwall.board_copy import (
+    build_board,
+    clock_text,
+    format_stats,
+    nearby_line,
+    progress_of,
+    today_line,
+)
 from flightwall.const import TIME_12H, TIME_24H, UNIT_IMPERIAL, UNIT_METRIC
 
 
@@ -113,6 +120,34 @@ def test_empty_sky_shows_last_flight() -> None:
     assert empty.show_logos is False
     assert [label for label, _ in empty.flap_rows] == ["STATUS", "TIME", "DATE"]
     assert empty.clock_first is False
+
+
+def test_today_and_nearby_lines() -> None:
+    now = datetime.fromtimestamp(1_700_005_000, UTC)
+    today = today_line(
+        [
+            {"callsign": "AAL123", "route": "LAX-JFK"},
+            {"callsign": "UAL7", "route": "SFO-EWR"},
+        ]
+    )
+    assert today.startswith("TODAY")
+    assert "AAL123 LAX-JFK" in today
+    also = nearby_line([{**FLIGHT, "callsign": "UAL7", "distance": 8.0}], UNIT_IMPERIAL)
+    assert also.startswith("ALSO")
+    assert "UAL7" in also
+    waiting = build_board(
+        None,
+        now=now,
+        overhead_today=[{"callsign": "AAL123", "route": "LAX-JFK"}],
+    )
+    assert "AAL123" in waiting.today_line
+    live = build_board(
+        FLIGHT,
+        now=now,
+        nearby_flights=[{**FLIGHT, "callsign": "UAL7", "distance": 8.0}],
+    )
+    assert "UAL7" in live.nearby_line
+    assert live.today_line == ""
 
 
 def test_waiting_layout_clock_first() -> None:

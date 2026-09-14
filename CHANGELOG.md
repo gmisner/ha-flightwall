@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.13.0
+
+- Draw a trail on the radar from positions collected while the same
+  callsign is selected
+- Show today's traffic on the waiting board
+- List other aircraft in range on an ALSO line under NEXT
+- Toggle type silhouettes, optional FR24 aircraft photos, and auto
+  night (follow `sun.sun`, split-flap stays mechanical)
+- Filter airliners-only, hide helicopters, hide military types, and
+  set a minimum ground speed
+- Skip the current aircraft for five minutes, or pin it while it stays
+  in range (`flightwall.skip` / `pin` / `unpin` plus buttons)
+- Mirror the TV PNG on the Flightwall dashboard via `camera.flightwall_board`
+- Keep writing `/local/flightwall-board.png` even when the TV is off
+- Add `scripts/release.sh` to tag and publish a GitHub release
+
 ## 1.12.1
 
 - Turn the house-centered radar on or off under Configure → Show radar

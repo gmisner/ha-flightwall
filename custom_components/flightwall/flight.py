@@ -46,6 +46,30 @@ def pick_best_flight(
     return ranked[0] if ranked else None
 
 
+def pick_display(
+    ranked: list[dict[str, Any]] | None,
+    *,
+    skipped: set[str] | None = None,
+    pinned: str | None = None,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, list[dict[str, Any]]]:
+    """Apply skip/pin on a ranked list. Nearby is everyone else still visible."""
+    blocked = skipped or set()
+    visible = [
+        flight for flight in (ranked or []) if callsign_of(flight) not in blocked
+    ]
+    selected: dict[str, Any] | None = None
+    if pinned:
+        for flight in visible:
+            if callsign_of(flight) == pinned:
+                selected = flight
+                break
+    if selected is None:
+        selected = visible[0] if visible else None
+    nearby = [flight for flight in visible if flight is not selected]
+    nxt = nearby[0] if nearby else None
+    return selected, nxt, nearby[:5]
+
+
 def callsign_of(flight: dict[str, Any] | None) -> str:
     """State string for the selected flight."""
     if not flight:

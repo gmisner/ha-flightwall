@@ -21,6 +21,7 @@ from .const import (
     WAITING_LAST,
 )
 from .logos import logo_bytes_unusable, logo_cache_name, logo_url
+from .photos import photo_cache_name, photo_url
 from .radar import draw_radar
 from .silhouettes import load_silhouette_svg, rasterize_svg, shape_code
 
@@ -30,6 +31,7 @@ SCALE = 2
 CELL = 3
 LOGO_TARGET = 220
 SILHOUETTE_TARGET = 96
+PHOTO_SIZE = (320, 200)
 
 PALETTES = {
     STYLE_LED: {
@@ -76,6 +78,7 @@ PALETTES = {
 
 _LOGO_CACHE: dict[str, Image.Image | None] = {}
 _SIL_CACHE: dict[str, bytes | None] = {}
+_PHOTO_CACHE: dict[str, Image.Image | None] = {}
 
 
 def _s(value: int) -> int:
@@ -172,6 +175,56 @@ def _airline_logo(
     return logo.resize(size, resample)
 
 
+def _load_photo(flight: dict[str, Any] | None, photo_dir: Path | None) -> Image.Image | None:
+    url = photo_url(flight)
+    name = photo_cache_name(flight)
+    if not url or not name:
+        return None
+    if name in _PHOTO_CACHE:
+        return _PHOTO_CACHE[name]
+    path = photo_dir / name if photo_dir is not None else None
+    data: bytes | None = None
+    if path is not None and path.is_file():
+        try:
+            data = path.read_bytes()
+        except OSError:
+            data = None
+    if data is None:
+        try:
+            with urlopen(url, timeout=8) as response:
+                data = response.read()
+        except OSError:
+            _PHOTO_CACHE[name] = None
+            return None
+        if path is not None and data:
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+            except OSError:
+                pass
+    if not data:
+        _PHOTO_CACHE[name] = None
+        return None
+    try:
+        photo = Image.open(BytesIO(data)).convert("RGB")
+    except OSError:
+        _PHOTO_CACHE[name] = None
+        return None
+    _PHOTO_CACHE[name] = photo
+    return photo
+
+
+def _fit_photo(photo: Image.Image, box: tuple[int, int], style: str) -> Image.Image:
+    width, height = box
+    ratio = min(width / photo.width, height / photo.height)
+    size = (max(1, int(photo.width * ratio)), max(1, int(photo.height * ratio)))
+    resample = Image.Resampling.NEAREST if style == STYLE_LED else Image.Resampling.LANCZOS
+    fitted = photo.resize(size, resample)
+    canvas = Image.new("RGB", box, (0, 0, 0))
+    canvas.paste(fitted, ((width - fitted.width) // 2, (height - fitted.height) // 2))
+    return canvas
+
+
 def _generic_mark(size: int, fill: tuple[int, int, int]) -> Image.Image:
     """Simple top-down aircraft so every flight has the same logo column."""
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
@@ -244,6 +297,11 @@ def render_board_png(
     sil_dir: Path | None = None,
     home: tuple[float, float] | None = None,
     show_radar: bool = True,
+    show_silhouette: bool = True,
+    photo_dir: Path | None = None,
+    show_photo: bool = False,
+    overhead_today: list[dict[str, Any]] | None = None,
+    nearby_flights: list[dict[str, Any]] | None = None,
 ) -> bytes:
     """Return PNG bytes for the current flight, or the empty-sky board."""
     now = now or datetime.now(UTC)
@@ -258,7 +316,14 @@ def render_board_png(
         time_format=time_format,
         show_logos=show_logos,
         waiting_layout=waiting_layout,
+        overhead_today=overhead_today,
+        nearby_flights=nearby_flights,
     )
+    extras = {
+        "show_silhouette": show_silhouette,
+        "photo_dir": photo_dir,
+        "show_photo": show_photo,
+    }
     if style == STYLE_SPLITFLAP:
         return _png_bytes(_draw_splitflap(board))
 
@@ -288,6 +353,7 @@ def render_board_png(
             last_flight,
             units,
             show_radar,
+            **extras,
         )
     else:
         _draw_flight(
@@ -306,6 +372,7 @@ def render_board_png(
             flight=flight,
             units=units,
             show_radar=show_radar,
+            **extras,
         )
 
     if colors["grid"]:
@@ -330,8 +397,12 @@ def _draw_empty(
     last_flight: dict[str, Any] | None = None,
     units: str = UNIT_IMPERIAL,
     show_radar: bool = True,
+    show_silhouette: bool = True,
+    photo_dir: Path | None = None,
+    show_photo: bool = False,
 ) -> None:
     left = _s(120)
+    today = getattr(board, "today_line", "")
     if getattr(board, "clock_first", False) and (board.title or board.route):
         draw.text((left, _s(80)), board.date, font=stats_font, fill=colors["muted"])
         draw.text((left, _s(180)), board.clock, font=clock_font, fill=colors["ink"])
@@ -351,6 +422,9 @@ def _draw_empty(
             y += _s(64)
         if board.last_ago:
             draw.text((left, y), board.last_ago, font=body_font, fill=colors["ink"])
+            y += _s(80)
+        if today:
+            draw.text((left, y), today, font=stats_font, fill=colors["muted"])
         return
     if board.title or board.route:
         waiting = "WAITING FOR TRAFFIC"
@@ -380,11 +454,23 @@ def _draw_empty(
             flight=last_flight,
             units=units,
             show_radar=show_radar,
+            show_silhouette=show_silhouette,
+            photo_dir=photo_dir,
+            show_photo=False,
         )
+        if today:
+            draw.text(
+                (_s(120), _s(1060)),
+                today,
+                font=stats_font,
+                fill=colors["muted"],
+            )
         return
     draw.text((left, _s(80)), board.date, font=stats_font, fill=colors["muted"])
     draw.text((left, _s(180)), board.clock, font=clock_font, fill=colors["ink"])
     draw.text((left, _s(460)), "WAITING FOR TRAFFIC", font=body_font, fill=colors["muted"])
+    if today:
+        draw.text((left, _s(560)), today, font=stats_font, fill=colors["ink"])
 
 
 def _draw_flight(
@@ -404,6 +490,9 @@ def _draw_flight(
     flight: dict[str, Any] | None = None,
     units: str = UNIT_IMPERIAL,
     show_radar: bool = True,
+    show_silhouette: bool = True,
+    photo_dir: Path | None = None,
+    show_photo: bool = False,
 ) -> None:
     left = _s(120)
     if getattr(board, "show_logos", True):
@@ -434,17 +523,18 @@ def _draw_flight(
         y = _s(420) + y0
     if board.details:
         draw.text((left, y), board.details, font=body_font, fill=colors["muted"])
-        silhouette = _type_silhouette(
-            getattr(board, "aircraft_code", ""),
-            colors["muted"],
-            sil_dir,
-        )
-        if silhouette is not None:
-            box = draw.textbbox((left, y), board.details, font=body_font)
-            sx = box[2] + _s(28)
-            sy = y + ((box[3] - box[1]) - silhouette.height) // 2
-            if sx + silhouette.width < CANVAS[0] - _s(80):
-                image.paste(silhouette, (sx, max(sy, 0)), silhouette)
+        if show_silhouette:
+            silhouette = _type_silhouette(
+                getattr(board, "aircraft_code", ""),
+                colors["muted"],
+                sil_dir,
+            )
+            if silhouette is not None:
+                box = draw.textbbox((left, y), board.details, font=body_font)
+                sx = box[2] + _s(28)
+                sy = y + ((box[3] - box[1]) - silhouette.height) // 2
+                if sx + silhouette.width < CANVAS[0] - _s(80):
+                    image.paste(silhouette, (sx, max(sy, 0)), silhouette)
         y += _s(80)
     ident = getattr(board, "ident", "")
     if ident:
@@ -470,6 +560,15 @@ def _draw_flight(
             font=stats_font,
             fill=colors["muted"],
         )
+    nearby = getattr(board, "nearby_line", "")
+    if nearby:
+        draw.text(
+            (_s(120), _s(1048) + y0),
+            nearby,
+            font=stats_font,
+            fill=colors["muted"],
+        )
+    radar_bottom = _s(80) + y0
     if show_radar and home is not None and flight:
         radar = draw_radar(
             _s(440),
@@ -483,6 +582,16 @@ def _draw_flight(
             rx = CANVAS[0] - _s(80) - radar.width
             ry = _s(80) + y0
             image.paste(radar, (rx, ry), radar)
+            radar_bottom = ry + radar.height
+    if show_photo and flight:
+        photo = _load_photo(flight, photo_dir)
+        if photo is not None:
+            box = (_s(PHOTO_SIZE[0]), _s(PHOTO_SIZE[1]))
+            fitted = _fit_photo(photo, box, style)
+            px = CANVAS[0] - _s(80) - fitted.width
+            py = radar_bottom + _s(24) if show_radar else _s(80) + y0
+            if py + fitted.height < CANVAS[1] - _s(40):
+                image.paste(fitted, (px, py))
 
 
 FLAP_COLS = 16
@@ -595,6 +704,11 @@ def write_board_png(
     sil_dir: Path | None = None,
     home: tuple[float, float] | None = None,
     show_radar: bool = True,
+    show_silhouette: bool = True,
+    photo_dir: Path | None = None,
+    show_photo: bool = False,
+    overhead_today: list[dict[str, Any]] | None = None,
+    nearby_flights: list[dict[str, Any]] | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(
@@ -613,5 +727,10 @@ def write_board_png(
             sil_dir=sil_dir,
             home=home,
             show_radar=show_radar,
+            show_silhouette=show_silhouette,
+            photo_dir=photo_dir,
+            show_photo=show_photo,
+            overhead_today=overhead_today,
+            nearby_flights=nearby_flights,
         )
     )

@@ -8,10 +8,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, Platform
 from homeassistant.core import Event, HomeAssistant, ServiceCall
 
-from .const import DOMAIN, SERVICE_RECAST
+from .const import DOMAIN, SERVICE_PIN, SERVICE_RECAST, SERVICE_SKIP, SERVICE_UNPIN
 from .dashboard import (
     async_ensure_dashboard,
     async_write_theme,
+    board_camera_for,
     dashboard_path_for,
     flight_entity_for,
 )
@@ -21,7 +22,13 @@ from .tv import RECAST_REASON
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.CAMERA,
+    Platform.SENSOR,
+    Platform.SWITCH,
+]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -58,6 +65,7 @@ async def _async_setup_dashboard(hass: HomeAssistant, runtime: FlightwallRuntime
         runtime.ha_theme,
         path=dashboard_path_for(hass, runtime.entry),
         flight_entity=flight_entity_for(hass, runtime.entry),
+        camera_entity=board_camera_for(hass, runtime.entry),
     )
 
 
@@ -67,8 +75,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     runtime: FlightwallRuntime | None = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
     if runtime is not None:
         await runtime.async_unload()
-    if not hass.data.get(DOMAIN) and hass.services.has_service(DOMAIN, SERVICE_RECAST):
-        hass.services.async_remove(DOMAIN, SERVICE_RECAST)
+    if not hass.data.get(DOMAIN):
+        for service in (SERVICE_RECAST, SERVICE_SKIP, SERVICE_PIN, SERVICE_UNPIN):
+            if hass.services.has_service(DOMAIN, service):
+                hass.services.async_remove(DOMAIN, service)
     return unload_ok
 
 
@@ -85,4 +95,22 @@ def _async_register_services(hass: HomeAssistant) -> None:
             if isinstance(runtime, FlightwallRuntime):
                 await runtime.async_cast(reason=RECAST_REASON)
 
+    async def _skip(_call: ServiceCall) -> None:
+        for runtime in hass.data.get(DOMAIN, {}).values():
+            if isinstance(runtime, FlightwallRuntime):
+                await runtime.async_skip()
+
+    async def _pin(_call: ServiceCall) -> None:
+        for runtime in hass.data.get(DOMAIN, {}).values():
+            if isinstance(runtime, FlightwallRuntime):
+                await runtime.async_pin()
+
+    async def _unpin(_call: ServiceCall) -> None:
+        for runtime in hass.data.get(DOMAIN, {}).values():
+            if isinstance(runtime, FlightwallRuntime):
+                await runtime.async_unpin()
+
     hass.services.async_register(DOMAIN, SERVICE_RECAST, _recast)
+    hass.services.async_register(DOMAIN, SERVICE_SKIP, _skip)
+    hass.services.async_register(DOMAIN, SERVICE_PIN, _pin)
+    hass.services.async_register(DOMAIN, SERVICE_UNPIN, _unpin)

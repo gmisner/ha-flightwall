@@ -18,11 +18,12 @@ by physical LED flight boards, in particular
   angle**, not ground distance. A jet at 38,000 ft ten kilometres away
   is not the plane in the window; the one on approach at 3,000 ft is.
 - Shows city names, registration, heading, a type silhouette beside
-  that line, a radar of the aircraft versus the house, and a next-up
-  flight when a second aircraft is in range.
+  that line, a radar of the aircraft versus the house (with a trail
+  while the same flight is selected), and NEXT / ALSO lines when more
+  aircraft are in range.
   Empty sky shows the last aircraft (or a large clock, if you pick
-  that waiting layout). Last overhead and today's traffic survive a
-  Home Assistant restart.
+  that waiting layout) plus today's traffic. Last overhead and today's
+  traffic survive a Home Assistant restart.
 - On a TV, writes a 4K board image and Casts it. On a tablet, open the
   Flightwall dashboard (or the animated split-flap page) in a browser
   or Fully Kiosk.
@@ -122,7 +123,8 @@ logos or city-pair routes.
    **Settings → Devices & Services → Flight Wall → Configure**.
 
 The first instance creates `sensor.flightwall_flight`, the inbound
-binary sensor, the TV switch, and a **Flightwall** sidebar dashboard.
+binary sensor, the TV switch, skip/pin buttons, a board camera, and a
+**Flightwall** sidebar dashboard.
 A second Add Integration (another TV, or another flights sensor) gets
 `sensor.flightwall_flight_2` and its own dashboard. Existing installs
 keep their current entity IDs. The board should appear about ten
@@ -148,8 +150,9 @@ Full TV notes: [docs/TV.md](docs/TV.md).
 
 Do not install the YAML package. Open
 `http://YOUR_HA:8123/flight-wall/board` in a browser or Fully Kiosk.
-Use Display → Live if you want that dashboard on a Chromecast that can
-load Home Assistant.
+That view is a live picture of the same PNG the TV uses. A **Text**
+tab keeps the old markdown board. Use Display → Live if you want that
+dashboard on a Chromecast that can load Home Assistant.
 
 The integration copies the animated split-flap page to
 `/local/flightwall/splitflap.html` on setup. Open that URL for the
@@ -168,8 +171,10 @@ HACS options live in the integration Configure dialog. See
 
 | What | Where | Default |
 |---|---|---|
-| Display, theme, units, clock, logos, radar, image refresh, inbound off-delay, waiting board, quiet hours, ADS-B | Integration → Configure | Image, LED night, imperial, radar on, 20 s refresh, 120 s inbound, last aircraft waiting |
+| Display, theme, units, clock, logos, radar, silhouette, photo, auto night, filters, image refresh, inbound off-delay, waiting board, quiet hours, ADS-B | Integration → Configure | Image, LED night, imperial, radar on, silhouette on, photo off, 20 s refresh, 120 s inbound, last aircraft waiting |
 | TV is a flight board | `switch.flightwall_tv` | on after setup |
+| Skip / pin the current aircraft | `button.flightwall_skip`, `button.flightwall_pin`, `button.flightwall_unpin` or `flightwall.skip` / `pin` / `unpin` | skip lasts 5 minutes |
+| Dashboard mirror of the TV | `camera.flightwall_board` on `/flight-wall/board` | same 4K PNG as Cast |
 | How long after the last aircraft | **Inbound off-delay** (inbound binary sensor debounce) | 2 minutes |
 
 ## Known limitations
@@ -182,13 +187,17 @@ HACS options live in the integration Configure dialog. See
   (B738, A320, …) are expanded to a name; unknown codes stay as-is.
 - **Airline logos are cached** under `/local/flightwall/logos/{IATA}.png`
   after the first fetch from the Kiwi CDN.
-- **Type silhouettes** sit beside the aircraft line, not in the logo
-  tile. Unknown ICAO codes omit the shape. Cached under
-  `/local/flightwall/silhouettes/`.
 - **The radar** is north-up with the house at the centre. Turn it off
   under Configure → **Show radar**. It needs Home Assistant’s location
-  and the flight’s coordinates. FR24 does not send a trail; a track
-  line only appears if the flight dict includes one.
+  and the flight’s coordinates. While the same callsign is selected,
+  Flight Wall stores a short trail of positions and draws it on the
+  disc.
+- **Type silhouettes** sit beside the aircraft line, not in the logo
+  tile. Turn them off under Configure → **Show type silhouette**.
+  Unknown ICAO codes omit the shape. Cached under
+  `/local/flightwall/silhouettes/`.
+- **Aircraft photos** (off by default) use Flightradar24 photo URLs
+  when present and cache under `/local/flightwall/photos/`.
 - **The LED grid softens type on purpose.** Use the plain theme on a
   large television if you want maximum sharpness.
 - **Many built-in Chromecasts cannot load a live Home Assistant
