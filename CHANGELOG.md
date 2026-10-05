@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.13.4
+
+- Drop `Pillow` from the integration manifest. Home Assistant already
+  ships it, and hassfest now rejects core packages on custom
+  integrations (this was failing the daily validate run that HACS
+  reviewers check)
+
 ## 1.13.3
 
 - Center NEXT / ALSO / TODAY on the board so a long nearby list does
