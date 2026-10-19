@@ -88,6 +88,7 @@ MIN_ALTITUDE_FT = 500
 INBOUND_DELAY_OFF = timedelta(seconds=DEFAULT_INBOUND_DELAY)
 TV_POWER_ON_DELAY = timedelta(seconds=10)
 TV_KEEPALIVE = timedelta(seconds=DEFAULT_REFRESH_SECONDS)
+BOARD_SIGN_TTL = timedelta(hours=1)
 
 
 def keepalive_interval(seconds: object = None) -> timedelta:

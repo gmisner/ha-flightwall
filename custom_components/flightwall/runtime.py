@@ -9,7 +9,6 @@ from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
@@ -21,6 +20,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.helpers.network import get_url
 from homeassistant.helpers.storage import Store
+from homeassistant.util import dt as dt_util
 
 from .adsb import flights_from_attributes
 from .board_copy import build_board
@@ -28,6 +28,7 @@ from .board_image import write_board_png
 from .const import (
     ADSB_POLL,
     BOARD_PNG_NAME,
+    BOARD_SIGN_TTL,
     CONF_ADSB_URL,
     CONF_AIRLINERS_ONLY,
     CONF_AUTO_NIGHT,
@@ -82,7 +83,8 @@ from .const import (
     VIEW_PATH,
     keepalive_interval,
 )
-from .dashboard import dashboard_path_for
+from .dashboard import board_camera_for, dashboard_path_for
+from .paths import camera_proxy_path, private_board_png_path, public_board_png_path
 from .filters import filter_flights
 from .flight import callsign_of, pick_display, rank_flights
 from .persist import dump_state, load_state, merge_overhead
@@ -314,6 +316,7 @@ class FlightwallRuntime:
 
     async def async_setup(self) -> None:
         await self._async_restore()
+        await self.hass.async_add_executor_job(self._remove_public_board_png)
         self._refresh_flight()
         if self.flights_entity:
             self._unsubs.append(
@@ -388,10 +391,7 @@ class FlightwallRuntime:
         return state is not None and state.state == "below_horizon"
 
     def _local_now(self) -> datetime:
-        try:
-            return datetime.now(ZoneInfo(self.hass.config.time_zone))
-        except (KeyError, ValueError):
-            return datetime.now().astimezone()
+        return dt_util.now()
 
     def _prune_overhead(self) -> None:
         day = self._local_now().date().isoformat()
@@ -530,7 +530,8 @@ class FlightwallRuntime:
         if player is None or player.state not in {"playing", "paused"}:
             return False
         content = str(player.attributes.get("media_content_id") or "")
-        if BOARD_PNG_NAME in content:
+        camera_id = board_camera_for(self.hass, self.entry)
+        if BOARD_PNG_NAME in content or (camera_id and camera_id in content):
             return True
         app = str(player.attributes.get("app_name") or "").lower()
         if "default media receiver" in app:
@@ -558,9 +559,11 @@ class FlightwallRuntime:
             showing_board=self._tv_showing_board(),
         )
 
-    async def async_set_tv_enabled(self, enabled: bool) -> None:
+    async def async_set_tv_enabled(
+        self, enabled: bool, *, takeover: bool = True
+    ) -> None:
         self.tv_enabled = enabled
-        if enabled:
+        if enabled and takeover:
             await self.async_cast(reason="armed")
 
     def _home_latlon(self) -> tuple[float, float] | None:
@@ -574,15 +577,40 @@ class FlightwallRuntime:
         return lat, lon
 
     def _board_path(self) -> Path:
-        return Path(self.hass.config.path("www")) / BOARD_PNG_NAME
+        return private_board_png_path(self.hass.config.path())
 
     @property
     def board_png_path(self) -> Path:
         return self._board_path()
 
-    def _board_url(self) -> str:
+    def _remove_public_board_png(self) -> None:
+        path = public_board_png_path(self.hass.config.path("www"))
+        try:
+            path.unlink(missing_ok=True)
+        except OSError as err:
+            _LOGGER.debug("Could not remove public board PNG: %s", err)
+
+    def _signed_board_url(self) -> str:
+        from homeassistant.components.http.auth import async_sign_path
+
+        entity_id = board_camera_for(self.hass, self.entry)
+        try:
+            signed = async_sign_path(
+                self.hass,
+                camera_proxy_path(entity_id),
+                BOARD_SIGN_TTL,
+                use_content_user=True,
+            )
+        except TypeError:
+            signed = async_sign_path(
+                self.hass,
+                camera_proxy_path(entity_id),
+                BOARD_SIGN_TTL,
+            )
+        except KeyError as err:
+            raise HomeAssistantError("Could not sign Flight Wall camera URL") from err
         base = get_url(self.hass, prefer_external=False, allow_internal=True)
-        return f"{base.rstrip('/')}/local/{BOARD_PNG_NAME}?t={int(datetime.now().timestamp())}"
+        return f"{base.rstrip('/')}{signed}"
 
     async def _write_board_image(self) -> None:
         async with self._write_lock:
@@ -660,7 +688,7 @@ class FlightwallRuntime:
             "play_media",
             {
                 "entity_id": self.tv_player,
-                "media_content_id": self._board_url(),
+                "media_content_id": self._signed_board_url(),
                 "media_content_type": "image/png",
             },
             blocking=False,
@@ -706,9 +734,9 @@ class FlightwallRuntime:
 
         if not self.tv_player:
             return
-        if reason != "recast" and not self.tv_enabled:
+        if reason != RECAST_REASON and not self.tv_enabled:
             return
-        if reason != "armed" and not self._tv_is_on():
+        if reason != RECAST_REASON and not self._tv_is_on():
             return
         if not should_attempt_cast(
             reason=reason,

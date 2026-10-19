@@ -75,6 +75,13 @@ def test_skip_keepalive_when_player_is_dead() -> None:
     assert should_attempt_cast(reason="recast", power_on=False, player_state="off")
 
 
+def test_armed_respects_tv_power() -> None:
+    assert not should_attempt_cast(
+        reason="armed", power_on=False, player_state="playing"
+    )
+    assert should_attempt_cast(reason="armed", power_on=True, player_state="off")
+
+
 def test_icao_type_names() -> None:
     assert type_name("B738") == "Boeing 737-800"
     assert type_name("B738", "Boeing 737-800") == "Boeing 737-800"

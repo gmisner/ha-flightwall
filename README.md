@@ -69,8 +69,9 @@ Waiting for traffic (last aircraft, then large-clock layout):
 | A Google Cast `media_player` on that set | Core | Receives the board image |
 
 Home Assistant should be reachable over **HTTPS** (Nabu Casa or
-`external_url`) so Cast can discover it. The board image is served on
-the LAN as `/local/flightwall-board.png`.
+`external_url`) so Cast can discover it. The board image is served
+through `camera.flightwall_board` (authenticated). Cast gets a signed,
+expiring URL for the same still.
 
 Do **not** also install `packages/flightwall.yaml` if you use HACS —
 you would get duplicate entities.

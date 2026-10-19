@@ -8,5 +8,5 @@
   "integration_type": "service",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/gmisner/ha-flightwall/issues",
-  "version": "1.13.4"
+  "version": "1.13.5"
 }

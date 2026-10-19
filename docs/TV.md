@@ -24,13 +24,14 @@ Assistant cannot start AirPlay.
 
 If you installed Flight Wall from HACS, skip the file copies and the TV
 automation paste. Add the integration, pick the two TV entities, leave
-`switch.flightwall_tv` on. The integration writes
-`/local/flightwall-board.png` and plays that image on the Chromecast
-when the TV comes on. It refreshes on the **Image refresh** interval
-under Configure (default 20 seconds) while Cast is showing the board,
-and immediately when the selected aircraft changes. The same PNG is
-written for the Flightwall dashboard (`camera.flightwall_board`) even
-when the set is off.
+`switch.flightwall_tv` on. The integration plays a signed
+`camera.flightwall_board` URL on the Chromecast when the TV comes on.
+It refreshes on the **Image refresh** interval under Configure (default
+20 seconds) while Cast is showing the board, and immediately when the
+selected aircraft changes. The same PNG is written for the camera entity
+even when the set is off; it is not published under `/local/`.
+A Home Assistant restart restores the switch without taking over the
+set. Re-arm with an explicit `turn_on`, or wait for the TV to come on.
 If someone switches the set to another app — Netflix, HDMI, the TV's
 home screen — Flight Wall does not take over again until the TV is
 turned off and on, you re-arm the switch, or you call the
@@ -114,8 +115,11 @@ from your other dashboards.
 
 ### Test the board image by hand
 
-```
-http://YOUR_HA:8123/local/flightwall-board.png
+Open `camera.flightwall_board` in Home Assistant (login required). Then
+recast:
+
+```yaml
+action: flightwall.recast
 ```
 
 ```yaml
@@ -129,14 +133,6 @@ Only TVs that list a Cast / Chromecast input need that source switch.
 HomeKit and similar power entities often list SMARTCAST, AirPlay, or
 HDMI instead; Flight Wall skips `select_source` there and still plays
 the board on the Cast player.
-
-```yaml
-action: media_player.play_media
-data:
-  entity_id: media_player.YOUR_CAST_PLAYER
-  media_content_id: http://YOUR_HA:8123/local/flightwall-board.png
-  media_content_type: image/png
-```
 
 Then: switch on, TV off, TV on with the remote. After about ten seconds
 the board should appear. While Cast is showing it, the image refreshes

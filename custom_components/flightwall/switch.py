@@ -47,7 +47,9 @@ class FlightwallTvSwitch(SwitchEntity, RestoreEntity):
         last = await self.async_get_last_state()
         if last is not None:
             self._attr_is_on = last.state == "on"
-        await self._runtime.async_set_tv_enabled(bool(self._attr_is_on))
+        await self._runtime.async_set_tv_enabled(
+            bool(self._attr_is_on), takeover=False
+        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         self._attr_is_on = True

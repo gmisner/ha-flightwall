@@ -20,6 +20,7 @@ async def async_install_www(hass: HomeAssistant) -> None:
         for src in SOURCE_DIR.glob("*"):
             if src.is_file():
                 (dest_dir / src.name).write_bytes(src.read_bytes())
+        (dest_dir / "board.html").unlink(missing_ok=True)
 
     try:
         await hass.async_add_executor_job(_copy)

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.13.5
+
+- Keep the board PNG out of `www/`. Cast uses a signed, expiring
+  camera-proxy URL; the dashboard shows `camera.flightwall_board`
+  instead of `/local/flightwall/board.html`
+- Restore the TV switch without taking over the set. Arming only
+  casts when the television is already on
+- Write `themes/flightwall.yaml` only if that file does not already
+  exist
+- Use `homeassistant.util.dt.now()` instead of building `ZoneInfo`
+  on the event loop
+
 ## 1.13.4
 
 - Drop `Pillow` from the integration manifest. Home Assistant already

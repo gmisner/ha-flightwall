@@ -58,7 +58,7 @@ def should_attempt_cast(
     if reason == RECAST_REASON:
         return True
     if reason in TV_TAKEOVER_REASONS:
-        return power_on or reason == "armed"
+        return power_on
     if not power_on:
         return False
     state = str(player_state or "").strip().lower()
